@@ -1,0 +1,60 @@
+{
+  "seed": 123,
+  "n_steps": 200,
+  "receivers_per_step": 10,
+
+  "candidates": {
+    "min_count": 5,
+    "max_count": 15
+  },
+
+  "selection": {
+    "mode": "softmax",
+    "alpha": 0.7,
+    "beta": 8.0
+  },
+
+  "price": {
+    "mu": 0.0,
+    "sigma": 0.6,
+    "r_max": 10.0
+  },
+
+  "decay": {
+    "lambda": 0.02
+  },
+
+  "global_trust": {
+    "mode": "mean",
+    "prior": 0.5
+  },
+
+  "q_min_good": 0.7,
+
+  "peer_groups": [
+    {
+      "name": "honest_normal",
+      "count": 70,
+      "q": {"dist": "beta", "a": 7, "b": 3},
+      "h": 1.0
+    },
+    {
+      "name": "honest_superior",
+      "count": 10,
+      "q": 0.95,
+      "h": 1.0
+    },
+    {
+      "name": "dishonest_raters",
+      "count": 10,
+      "q": {"dist": "uniform", "low": 0.6, "high": 0.9},
+      "h": 0.1
+    },
+    {
+      "name": "low_quality_sellers",
+      "count": 10,
+      "q": {"dist": "beta", "a": 2, "b": 8},
+      "h": 1.0
+    }
+  ]
+}
