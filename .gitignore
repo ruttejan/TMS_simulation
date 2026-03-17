@@ -1,0 +1,9 @@
+# Ignore Python cache directories
+__pycache__/
+**/__pycache__/
+
+# Ignore local virtual environment
+TMS_sim_env/
+**/TMS_sim_env/
+
+*.pyc
