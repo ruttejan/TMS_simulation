@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 import math
+import random
 
 @dataclass
 class RunningMean:
@@ -20,13 +21,19 @@ class RunningMean:
 class PriceHandler:
     """Handles price-related computations, such as maintaining a running mean price and computing price weights."""
     
-    def __init__(self, r_max: float = 10.0):
+    def __init__(self, mu: float, sigma: float, r_max: float = 10.0):
         self.price_mean = RunningMean()
         self.r_max = r_max
-        
+        self.mu = mu
+        self.sigma = sigma
+
     def update_mean(self, price: float) -> None:
         """Update the running mean price with a new transaction price."""
         self.price_mean.update(price)
+        
+    def gen_price(self, rng: random.Random) -> float:
+        """Generate a new transaction price from a log-normal distribution."""
+        return rng.lognormvariate(self.mu, self.sigma)
         
     def weight_from_price(self, price: float) -> float:
         """Compute bounded price weight $w_k\\in(0,1]$.
@@ -47,10 +54,11 @@ class PriceHandler:
         if p_bar <= 0:
             return 1.0
         r = price / p_bar
-        if r < 0:
-            r = 0.0
-        r = min(r, self.r_max)
-        denom = math.log(1.0 + self.r_max)
-        if denom <= 0:
-            return 1.0
-        return math.log(1.0 + r) / denom
+        return r
+        # if r < 0:
+        #     r = 0.0
+        # r = min(r, self.r_max)
+        # denom = math.log(1.0 + self.r_max)
+        # if denom <= 0:
+        #     return 1.0
+        # return math.log(1.0 + r) / denom

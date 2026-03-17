@@ -1,4 +1,6 @@
 import numpy as np
+from .eigentrust import eigentrust
+from .shapetrust import shapetrust, shapetrust_numba
 
 class GlobalTrustStore:
     """Maintains a vector of global trust values for all sellers."""
@@ -13,7 +15,9 @@ class GlobalTrustStore:
     
     def update(self, trust_matrix: np.ndarray) -> None:
         """Update global trust values based on the trust matrix."""
-        self.global_values = np.mean(trust_matrix, axis=1)
+        # filter out np.inf values in trust_matrix before computing mean
+        trust_matrix = np.nan_to_num(trust_matrix, posinf=0.0)
+        self.global_values = np.mean(trust_matrix, axis=0)
         
     def resize_vector(self, new_size: int) -> None:
         """Resize the global trust vector to accommodate more sellers."""
@@ -28,11 +32,18 @@ class SHAPETrustStore (GlobalTrustStore):
     
     def update(self, trust_matrix: np.ndarray) -> None:
         """Update global trust values based on the trust matrix using SHAPE method."""
-        pass # Implement calling of the SHAPE-Trust algorithm here
+        self.global_values = shapetrust(trust_matrix)
     
 class EigenTrustStore (GlobalTrustStore):
     """Maintains a vector of global trust values for all sellers using EigenTrust method."""
+    def __init__(self, n: int, pretrusted: list[int] | np.ndarray = [], alpha: float = 0.15):
+        super().__init__(n)
+        self.pretrusted = pretrusted
+        self.alpha = alpha  # Damping factor for EigenTrust, can be adjusted as needed
     
     def update(self, trust_matrix: np.ndarray) -> None:
         """Update global trust values based on the trust matrix using EigenTrust method."""
         pass # Implement calling of the EigenTrust algorithm here
+        # change np.inf to 0 in trust_matrix before calling eigentrust
+        trust_matrix = np.nan_to_num(trust_matrix, posinf=0.0)
+        self.global_values = eigentrust(trust_matrix, pretrusted=self.pretrusted, alpha=self.alpha, eps=1e-10, max_iter=100_000)

@@ -1,8 +1,8 @@
 {
-  "total": 2000,
-  "succ_rate": 0.7735,
-  "dishon_rate": 0.0915,
-  "avg_rating": 3.422,
-  "avg_score": 0.6843999999999962,
-  "good_pick_rate": 0.719
+  "total": 4488,
+  "succ_rate": 0.8943850267379679,
+  "dishon_rate": 0.20833333333333334,
+  "avg_rating": 2.935828877005348,
+  "avg_score": 0.5871657754010714,
+  "good_pick_rate": 0.9937611408199644
 }

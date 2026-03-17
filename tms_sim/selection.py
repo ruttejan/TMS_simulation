@@ -47,6 +47,7 @@ class SellerSelection:
         for j in candidates:
             tij = float(local_trust.get(j, 0.5))
             gj = float(global_trust.get(j, 0.5))
+            # print(f"Debug: buyer={buyer}, seller={j}, T_ij={tij:.3f}, G_j={gj:.3f}")
             scores[j] = self.alpha * tij + (1.0 - self.alpha) * gj
 
         m = self.mode.lower()

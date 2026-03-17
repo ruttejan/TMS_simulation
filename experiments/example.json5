@@ -1,0 +1,75 @@
+{
+  // Reproducibility
+  seed: 123,
+
+  // Main loop
+  n_steps: 1000,
+  receivers_per_step: {
+    min_count: 3,
+    max_count: 6,
+  },
+
+  // Candidate seller sampling
+  candidates: {
+    min_count: 3,
+    max_count: 10,
+  },
+
+  // Seller selection
+  selection: {
+    // mode: "softmax", // "softmax" or "argmax"
+    mode: "argmax",
+    alpha: 0.7,
+    beta: 8.0,
+  },
+
+  // Price model
+  price: {
+    mu: 0.0,
+    sigma: 0.6,
+    r_max: 10.0,
+  },
+
+  // Decay parameter (supports "lambda" or "lambd")
+  decay: {
+    lambda: 0.02,
+  },
+
+  global_trust: {
+    // mode: "mean", // "mean", "shape", or "eigen"
+    // mode: "shape",
+    // For mode: "eigen" add:
+    mode: "eigen",
+    alpha: 0.15,
+    percentage: 0.2,
+  },
+
+  q_min_good: 0.7,
+
+  // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
+  peers: [
+    {
+      kind: "HonestNormalPeer",
+      count: 10,
+    },
+    {
+      kind: "HonestSupremePeer",
+      count: 3,
+    },
+    {
+      kind: "MaliciousRaterPeer",
+      count: 4,
+    },
+    {
+      kind: "MaliciousBasicPeer",
+      count: 2,
+      params: {
+        type: "random", // "random" or "fixed"
+      },
+    },
+    {
+      kind: "FreeRiderPeer",
+      count: 2,
+    },
+  ],
+}

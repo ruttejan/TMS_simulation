@@ -73,7 +73,7 @@ class LocalTrustStore:
             new_matrix[:old_size, :old_size] = self.trust_matrix
             self.trust_matrix = new_matrix
 
-    def update(self, buyer: int, seller: int, t: int, weight: float, score: float) -> None:
+    def update(self, buyer: int, seller: int, t: int, weight: float, score: float | None) -> None:
         """Add one new weighted observation to (i,j).
 
         Args:
@@ -86,7 +86,8 @@ class LocalTrustStore:
         Returns:
             None. (Updates internal accumulators.)
         """
-
+        if score is None:
+            return
         key = (buyer, seller)
         acc = self.local_values.get(key)
         if acc is None:

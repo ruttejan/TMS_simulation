@@ -7,7 +7,7 @@ Python implementation of the simulation described in `ideas/simulation_overview.
 From this folder:
 
 ```
-python main.py experiments/example.json --out out/example_run
+python main.py experiments/example.json5 --out out/example_run
 ```
 
 Outputs:
@@ -17,14 +17,14 @@ Outputs:
 
 ## Experiment setup format
 
-Experiments are defined as a JSON file. See `experiments/example.json`.
+Experiments are defined as a JSON/JSON5 file. See `experiments/example.json5`.
+
+JSON5 allows comments, trailing commas, and unquoted keys.
 
 Key concepts:
 
-- Peers are created from one or more `peer_groups`.
-- Each peer has `(q, h)`:
-	- `q` = service quality, used for ground-truth outcome
-	- `h` = reporting honesty, used for rating inversion
+- Peers are created from typed `peers` entries (`kind`, `count`, optional `params`).
+- `receivers_per_step` can be a fixed integer or an interval object (`min_count`, `max_count`) sampled each step.
 - Peers are always online (no churn model).
 - Local trust is a decayed, price-weighted average of normalized star ratings.
 - Seller selection uses a convex combination of local trust and global seller reputation.
