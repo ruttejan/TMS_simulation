@@ -65,6 +65,10 @@ class LocalTrustStore:
         """Return the full local trust matrix T_ij."""
         return self.trust_matrix
     
+    def get_row(self, buyer: int) -> np.ndarray:
+        """Return the local trust values T_ij for a given buyer i."""
+        return self.trust_matrix[buyer, :]
+    
     def resize_matrix(self, new_size: int) -> None:
         """Resize the local trust matrix to accommodate more peers."""
         old_size = self.trust_matrix.shape[0]

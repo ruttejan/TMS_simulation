@@ -33,6 +33,7 @@ def normalize_trust_matrix(C: np.ndarray, pretrusted: list[int] | np.ndarray) ->
 	else:
 		fallback = np.ones(n, dtype=float) / n
 
+	C = np.maximum(C, 0)  # Ensure non-negative trust values
 	row_sums = C.sum(axis=1)
 	for i in range(n):
 		if row_sums[i] > 0:
@@ -93,12 +94,24 @@ def eigentrust(
 		return eigentrust_iteration(C, eps=eps, max_iter=max_iter)
 
 	C = normalize_trust_matrix(C, pretrusted)
+	# check if rows sum to 1
+	row_sums = C.sum(axis=1)
+	if not np.allclose(row_sums, 1.0):
+		raise ValueError("Row normalization failed: rows do not sum to 1.")
 
 	rho = np.zeros(n, dtype=float)
 	rho[pretrusted] = 1.0 / num_pretrusted
+	
 
 	trust_v = rho.copy()
 	for i in range(max_iter):
+      	# check if C contains infs or nans
+		if np.isnan(C).any() or np.isinf(C).any():
+			raise ValueError("Trust matrix contains NaN or Inf values.")
+		# check if trust_v contains infs or nans
+		if np.isnan(trust_v).any() or np.isinf(trust_v).any():
+			raise ValueError("Trust vector contains NaN or Inf values.")
+
 		trust_v_new = C.T @ trust_v
 		trust_v_new = (1.0 - alpha) * trust_v_new + alpha * rho
 		delta = np.linalg.norm(trust_v_new - trust_v)

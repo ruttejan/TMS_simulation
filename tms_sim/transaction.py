@@ -61,11 +61,11 @@ def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: Price
     outcome_ok = seller.sample_outcome(price_weight=price_weight, t=t)
 
     # Rating generation
-    rating = buyer.sample_stars(outcome_ok, buyer_id=buyer.peer_id) 
+    rating = buyer.sample_stars(outcome_ok, seller_id=seller.peer_id) 
 
     # Normalized score
+    # s_norm = None if rating is None else (rating - 2.5) / 2.5
     s_norm = None if rating is None else rating / 5.0
-    
 
     return Transaction(
         t=t,

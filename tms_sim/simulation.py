@@ -13,8 +13,10 @@ Implements the non-Appendix parts of `ideas/simulation_overview.md`:
 Important simplification: peers are always online (no churn).
 """
 
+import json
 import math
 import random
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,7 +31,7 @@ from .local_trust import LocalTrustStore
 from .global_trust import GlobalTrustStore, SHAPETrustStore, EigenTrustStore
 
 
-def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer], list[int], list[int]]:
+def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer], list[int], list[int], list[int]]:
     """Create peer instances from the configured typed peer specs."""
 
     peer_types: dict[str, type[Peer]] = {
@@ -39,6 +41,7 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
         "MaliciousBasicPeer": MaliciousBasicPeer,
         "MaliciousRaterPeer": MaliciousRaterPeer,
         "FreeRiderPeer": FreeRiderPeer,
+        "FreeRiderBuyerPeer": FreeRiderBuyerPeer,
         "TargetingMaliciousRaterPeer": TargetingMaliciousRaterPeer,
         "TraitorPeer": TraitorPeer,
         "CollusiveBasicPeer": CollusiveBasicPeer,
@@ -63,6 +66,7 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
     peers: list[Peer] = []
     collusive_peer_ids = []
     sybil_accounts_ids = []
+    freeriding_buyer_ids = []
     peer_id = 0
     for spec in cfg.peers:
         params = dict(spec.params)
@@ -72,15 +76,19 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
                 collusive_peer_ids.append(peer_id)
             if spec.kind == "SybilAccountPeer":
                 sybil_accounts_ids.append(peer_id)
+            if spec.kind == "FreeRiderBuyerPeer":
+                freeriding_buyer_ids.append(peer_id)
             peer_id += 1
-    return peers, collusive_peer_ids, sybil_accounts_ids
+            
+    return peers, collusive_peer_ids, sybil_accounts_ids, freeriding_buyer_ids
 
-def sample_peer_ids(rng:random.Random, all_peer_ids: list[int], low: int, high: int) -> list[int]:
-    """Sample peer ids from all_peer_ids excluding exclude_ids."""
+def sample_peer_ids(rng:random.Random, n: int, blacklist: list[int], low: int, high: int) -> list[int]:
+    """Sample peer ids from 0 to n-1 excluding blacklist."""
+    candidates = [i for i in range(n) if i not in blacklist]
     k_low = max(1, low)
     k_high = max(k_low, high)
-    k = min(rng.randint(k_low, k_high), len(all_peer_ids))
-    return rng.sample(all_peer_ids, k=k)
+    k = min(rng.randint(k_low, k_high), len(candidates))
+    return rng.sample(candidates, k=k)
 
 @dataclass
 class ExperimentResult:
@@ -95,7 +103,9 @@ def create_global_trust_store(cfg: ExperimentConfig, n: int, peers: list[Peer], 
     if cfg.global_trust.mode == "mean":
         return GlobalTrustStore(n=n)
     elif cfg.global_trust.mode == "shape":
-        return SHAPETrustStore(n=n)
+        if cfg.global_trust.alpha is not None:
+            return SHAPETrustStore(n=n, alpha=cfg.global_trust.alpha)
+        return SHAPETrustStore(n=n, alpha=None)
     elif cfg.global_trust.mode == "eigen":
         # select pretrusted peers randomly from honest peers (with percentage specified in config)
         honest_peers = [peer for peer in peers if isinstance(peer, (HonestNormalPeer, HonestSupremePeer))]
@@ -109,7 +119,7 @@ def create_global_trust_store(cfg: ExperimentConfig, n: int, peers: list[Peer], 
         raise ValueError(f"Unknown global trust mode: {cfg.global_trust.mode!r}")
 
 
-def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
+def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None) -> ExperimentResult:
     """Run a complete experiment.
 
     Args:
@@ -127,7 +137,7 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
 
     rng = random.Random(cfg.seed)
 
-    peers, collusive_peer_ids, sybil_accounts_ids = _build_peers(cfg, rng)
+    peers, collusive_peer_ids, sybil_accounts_ids, freeriding_buyer_ids = _build_peers(cfg, rng)
     
     n = len(peers)
     if n <= 1:
@@ -149,6 +159,11 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
     all_peers = list(range(n))
     for peer_id in sybil_accounts_ids:
         all_peers.remove(peer_id)
+        
+    # sybil cannot be regular buyers
+    buyers_blacklist = sybil_accounts_ids
+    # sybil and freeriding buyers cannot be regular sellers
+    sellers_blacklist = sybil_accounts_ids + freeriding_buyer_ids 
 
     for t in range(1, cfg.n_steps + 1):
         
@@ -167,8 +182,9 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
                         price_handler=price_handler,
                         rng=rng
                     )
-                    stats.update(tx, seller_q=peers[colluder_id].q, q_min_good=cfg.q_min_good)
-                    transactions.append(tx)
+                    local_trust.update(buyer=peer_id, seller=colluder_id, t=t, weight=tx.price_weight, score=tx.s_norm)
+                    stats.update_collusive()
+                    # transactions.append(tx)
             for peer_id in sybil_accounts_ids:
                 peer = peers[peer_id]
                 if not isinstance(peer, SybilAccountPeer):
@@ -181,20 +197,21 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
                     price_handler=price_handler,
                     rng=rng
                 )
-                stats.update(tx, seller_q=peers[main_account_id].q, q_min_good=cfg.q_min_good)
-                transactions.append(tx)
+                local_trust.update(buyer=peer_id, seller=main_account_id, t=t, weight=tx.price_weight, score=tx.s_norm)
+                stats.update_collusive()
+                # transactions.append(tx)
         
         # Sample how many buyers act this step from the configured interval.
-        receivers = sample_peer_ids(rng, all_peers, cfg.receivers.min_count, cfg.receivers.max_count)
+        receivers = sample_peer_ids(rng, n, buyers_blacklist, cfg.receivers.min_count, cfg.receivers.max_count)
 
         for buyer in receivers:
             
-            candidates = sample_peer_ids(rng, all_peers, cfg.candidates.min_count, cfg.candidates.max_count)
+            candidates = sample_peer_ids(rng, n, sellers_blacklist, cfg.candidates.min_count, cfg.candidates.max_count)
             
             # Ensure buyer is not in candidates
             while buyer in candidates:
                 del candidates[candidates.index(buyer)]
-                candidates.append(rng.sample(all_peers, k=1)[0])
+                candidates.append(sample_peer_ids(rng, n, sellers_blacklist + candidates, low=1, high=1)[0])
 
             # Gather local and global trust for the candidates
             lt = {j: local_trust.get_local_value(buyer, j, t=t) for j in candidates}
@@ -202,13 +219,18 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
 
             # Select the seller
             seller = None
-            while seller is None:
+            while seller is None and candidates != []:
                 seller = selector.select(buyer=buyer, candidates=candidates, local_trust=lt, global_trust=gt, rng=rng)
-                # TODO: implement seller-side acceptance policy (e.g., based on price or trust)
-                    # For now, we assume the selected seller always accepts the transaction.
-                # if peers[seller].accept_transaction(buyer=buyer):
-                #     del candidates[candidates.index(seller)]  # remove selected seller from candidates for next iteration
-                #     seller = None  # reset seller to trigger re-selection
+                # For now, we assume the selected seller always accepts the transaction.
+                if selector.reject(seller=seller, buyer=buyer, t=t, local_trust=local_trust, global_trust=global_trust):
+                    del candidates[candidates.index(seller)]  # remove selected seller from candidates for next iteration
+                    seller = None  # reset seller to trigger re-selection
+                    
+            if candidates == [] or seller is None:
+                # print(f"Debug: buyer {buyer} has no more candidates to select at time {t}")
+                continue
+            
+            stats.update_pick(peers[buyer], peers[seller], [peers[j] for j in candidates])
             
             # Simulate transaction
             tx = evaluate_transaction(
@@ -223,14 +245,19 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResult:
             local_trust.update(buyer=buyer, seller=seller, t=t, weight=tx.price_weight, score=tx.s_norm)
 
             # Aggregate statistics (for plotting / experiment comparison)
-            stats.update(tx, seller_q=peers[seller].q, q_min_good=cfg.q_min_good)
+            stats.update_normal(tx)
             transactions.append(tx)
             
         # update global trust values
         global_trust.update(local_trust.get_matrix())
+        # if t == cfg.n_steps / 4 or t == cfg.n_steps / 2 or t == 3 * cfg.n_steps / 4:
+        #     print(f"Stats at step {t}:")
+        #     print(json.dumps(stats.snapshot(), indent=2))
+            # stats.reset()
 
-    print(f"Final local trust matrix:\n{local_trust.get_matrix()}")
-    # Plot global trust values
-    print(f"Final global trust values: {global_trust.global_values}")
-    plot_global_trust(peers, global_values=global_trust.global_values, filename=f"global_trust_{cfg.global_trust.mode}.png")
+    if plot_path is None:
+        plot_file = f"{cfg.global_trust.mode}_min_{cfg.n_steps}_seed_{cfg.seed}.png"
+    else:
+        plot_file = str(Path(plot_path))
+    plot_global_trust(peers, global_values=global_trust.global_values, filename=plot_file)
     return ExperimentResult(config=cfg, stats=stats.snapshot(), transactions=transactions)

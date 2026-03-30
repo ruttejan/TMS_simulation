@@ -10,7 +10,7 @@ to a class from :mod:`tms_sim.peers`.
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from .distributions import DistSpec, parse_float_or_dist
 
@@ -123,13 +123,44 @@ class ExperimentConfig:
     decay: DecayConfig = DecayConfig()
     global_trust: GlobalTrustConfig = GlobalTrustConfig()
 
-    q_min_good: float = 0.7
-
     peers: Tuple[PeerSpecConfig, ...] = ()
 
     @property
     def n_peers(self) -> int:
         return sum(spec.count for spec in self.peers)
+
+
+def _parse_seeds(value: Any) -> list[int]:
+    """Parse the `seed` field.
+
+    Supported forms in JSON/JSON5:
+    - seed: 123
+    - seed: [123, 456, 789]
+
+    Returns:
+        List of integer seeds (non-empty).
+    """
+
+    if value is None:
+        return [123]
+
+    if isinstance(value, bool):
+        raise ValueError("seed must be an integer or an array of integers")
+
+    if isinstance(value, int):
+        return [int(value)]
+
+    if isinstance(value, (list, tuple)):
+        if len(value) == 0:
+            raise ValueError("seed array must be non-empty")
+        seeds: list[int] = []
+        for item in value:
+            if isinstance(item, bool) or not isinstance(item, int):
+                raise ValueError("seed array must contain only integers")
+            seeds.append(int(item))
+        return seeds
+
+    raise ValueError("seed must be an integer or an array of integers")
 
 
 def _require(mapping: Mapping[str, Any], key: str) -> Any:
@@ -206,10 +237,18 @@ def _parse_global_trust_cfg(obj: Mapping[str, Any]) -> GlobalTrustConfig:
         percentage = float(obj.get("percentage", obj.get("pretrusted_percentage", 0.1)))
         if not 0.0 <= percentage <= 1.0:
             raise ValueError("global_trust.percentage must be in [0, 1]")
+    elif mode == "shape":
+        alpha = obj.get("alpha", 1.0)
+        if alpha == "None":
+            alpha = None
+        else:
+            alpha = float(alpha)
+        percentage = 0.1
     else:
         alpha = 0.15
         percentage = 0.1
 
+    print(f"Parsed global trust config: mode={mode}, alpha={alpha}, percentage={percentage}")
     return GlobalTrustConfig(mode=mode, alpha=alpha, percentage=percentage)
 
 
@@ -226,6 +265,19 @@ def _parse_peer_spec_cfg(obj: Mapping[str, Any]) -> PeerSpecConfig:
     if not isinstance(params_raw, Mapping):
         raise ValueError("peer params must be a JSON object")
     params = dict(params_raw)
+    for k in params:
+        if k in {"colluder_ids", "target_seller_ids"}:
+            if isinstance(params[k], list):
+                continue
+            elif isinstance(params[k], str) and params[k].startswith("range(") and params[k].endswith(")"):
+                range_str = params[k][len("range("):-1]
+                start_str, end_str = range_str.split(",")
+                start, end = int(start_str.strip()), int(end_str.strip())
+                params[k] = list(range(start, end))
+            else:
+                raise ValueError(f"Invalid format for {k}: must be a list or range string")
+            
+                
 
     # Base Peer supports explicit q/h distribution specs.
     q = parse_float_or_dist(obj["q"]) if "q" in obj else None
@@ -237,14 +289,14 @@ def _parse_peer_spec_cfg(obj: Mapping[str, Any]) -> PeerSpecConfig:
     return PeerSpecConfig(kind=kind, count=count, params=params, q=q, h=h)
 
 
-def load_experiment_config(path: str | Path) -> ExperimentConfig:
-    """Load an experiment setup file into an :class:`ExperimentConfig`.
+def _load_experiment_raw(path: str | Path) -> Mapping[str, Any]:
+    """Load the JSON/JSON5 experiment file and return the top-level mapping.
 
     Args:
         path: Path to a JSON or JSON5 file describing an experiment.
 
     Returns:
-        Parsed :class:`ExperimentConfig` instance.
+        Parsed top-level JSON object as a mapping.
 
     Raises:
         ValueError: If the JSON is invalid or missing required keys.
@@ -268,6 +320,10 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
     if not isinstance(raw, Mapping):
         raise ValueError("Experiment config must be a JSON object")
 
+    return raw
+
+
+def _build_experiment_config(raw: Mapping[str, Any], *, seed: int) -> ExperimentConfig:
     peers_raw = raw.get("peers", [])
     if not peers_raw:
         raise ValueError("peers must be provided and non-empty")
@@ -275,7 +331,7 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
     peers = tuple(_parse_peer_spec_cfg(p) for p in peers_raw)
 
     return ExperimentConfig(
-        seed=int(raw.get("seed", 123)),
+        seed=int(seed),
         n_steps=int(raw.get("n_steps", 200)),
         receivers=_parse_receiver_cfg(raw.get("receivers_per_step", 10)),
         candidates=_parse_candidate_cfg(raw.get("candidates", {})),
@@ -283,6 +339,29 @@ def load_experiment_config(path: str | Path) -> ExperimentConfig:
         price=_parse_price_cfg(raw.get("price", {})),
         decay=_parse_decay_cfg(raw.get("decay", {})),
         global_trust=_parse_global_trust_cfg(raw.get("global_trust", {})),
-        q_min_good=float(raw.get("q_min_good", 0.7)),
         peers=peers,
     )
+
+
+def load_experiment_configs(path: str | Path) -> list[ExperimentConfig]:
+    """Load an experiment setup file into one or more configs.
+
+    If `seed` is a single integer, returns a list with one config.
+    If `seed` is an array, returns one config per seed.
+    """
+
+    raw = _load_experiment_raw(path)
+    seeds = _parse_seeds(raw.get("seed", 123))
+    return [_build_experiment_config(raw, seed=s) for s in seeds]
+
+
+def load_experiment_config(path: str | Path) -> ExperimentConfig:
+    """Load an experiment setup file into a single :class:`ExperimentConfig`.
+
+    Note:
+        If the config supplies multiple seeds (``seed`` is an array), this
+        returns only the first config. Prefer :func:`load_experiment_configs`.
+    """
+
+    configs = load_experiment_configs(path)
+    return configs[0]

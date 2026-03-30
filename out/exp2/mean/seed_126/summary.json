@@ -1,0 +1,18 @@
+{
+  "total_normal": 8951,
+  "total_collusive": 84000,
+  "succ_rate": 0.9409004580493799,
+  "dishon_rate": 0.15562506982460061,
+  "avg_rating": 3.668752094738018,
+  "avg_score": 0.48258295162550696,
+  "good_pick_rate": 0.4149257066249581,
+  "bad_pick_rate": 0.13350463635348006,
+  "other_pick_rate": 0.4515696570215618,
+  "bad_pick_distribution": {
+    "CollusiveTargetingPeer": 1.6217573221757322,
+    "TraitorPeer": 0.23682008368200838,
+    "CollusiveBasicPeer": 1.2443514644351465,
+    "MaliciousBasicPeer": 0.100418410041841,
+    "MaliciousRaterPeer": 0.5405857740585774
+  }
+}

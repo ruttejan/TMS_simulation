@@ -1,65 +1,3 @@
-# import numpy as np
-# from copy import copy
-
-# def internal_value(i: int, trust_matrix: np.ndarray) -> float:
-#     '''Compute the internal value of peer i based on the trust matrix.'''
-#     # filter np.inf values to avoid issues with summation
-#     row_finite_mask = np.isfinite(trust_matrix[i, :])
-#     row_sum = np.sum(trust_matrix[i, row_finite_mask])  # sum of row i
-#     column_finite_mask = np.isfinite(trust_matrix[:, i])
-#     column_sum = np.sum(trust_matrix[column_finite_mask, i])  # sum of column i
-#     return 0.5 * (row_sum + column_sum)
-
-# def external_value(i: int, neighbors_of_i: np.ndarray, incoming_values: dict[int, np.ndarray]) -> float:
-#     first_summand = 0.0
-#     second_summand = 0.0
-#     i_incoming_sorted = np.sort(incoming_values[i], axis=0)
-#     i_values = np.array([x[0] for x in i_incoming_sorted])
-    
-#     mi = len(i_values)
-#     for t in range(mi):
-#         b_i_t = i_values[t]
-#         b_i_t_minus_1 = 0.0 if t == 0 else i_values[t-1]
-#         first_summand += (b_i_t - b_i_t_minus_1) / (t + 1)
-        
-#     if mi > 0:
-#         first_summand -= i_values[mi-1] / (mi + 1)
-        
-#     for j in neighbors_of_i:
-#         j_incoming_sorted = incoming_values[j][np.argsort(incoming_values[j][:, 0])]
-#         j_values = np.array([x[0] for x in j_incoming_sorted])
-#         mj = len(j_values)
-#         rj = np.where(j_incoming_sorted[:, 1] == i)[0][0]  # index of i in j's incoming sorted list
-#         if rj is None:
-#             continue
-        
-#         for t in range(rj + 1, mj):
-#             b_j_t = j_values[t]
-#             b_j_t_minus_1 = 0.0 if t == 0 else j_values[t-1]
-#             second_summand += (b_j_t - b_j_t_minus_1) / (t + 1)
-            
-#         if mj > 0:
-#             second_summand -= j_values[mj-1] / (mj + 1)
-    
-#     return first_summand + second_summand
-    
-    
-# def shapetrust(trust_matrix: np.ndarray) -> np.ndarray:
-#     n = trust_matrix.shape[0]
-#     shapley_values = np.zeros(n)
-#     for i in range(n):
-#         shapley_values[i] = internal_value(i, trust_matrix)
-#         neighbors_of_i = np.where(np.isfinite(trust_matrix[i, :]))[0]
-#         neighbors_with_i = copy(neighbors_of_i)
-#         neighbors_with_i = np.append(neighbors_with_i, i)
-#         incoming_values = {}
-#         for j in neighbors_with_i:
-#             in_idx = np.where(np.isfinite(trust_matrix[:, j]))[0]
-#             incoming_values[j] = np.array([[trust_matrix[p,j], p] for p in in_idx])
-            
-#         shapley_values[i] += external_value(i, neighbors_of_i, incoming_values)
-        
-#     return shapley_values
 import numpy as np
 
 def internal_value(i: int, A: np.ndarray) -> float:
@@ -68,7 +6,7 @@ def internal_value(i: int, A: np.ndarray) -> float:
     return 0.5 * (row_sum + col_sum)
 
 
-def precompute_incoming(A):
+def precompute_incoming(A: np.ndarray, max: bool = False):
     """Precompute sorted incoming values for all nodes."""
     n = A.shape[0]
     incoming = {}
@@ -79,12 +17,15 @@ def precompute_incoming(A):
 
         # sort by values
         order = np.argsort(vals)
+        if max:
+            order = order[::-1]  # sort in descending order
+            
         incoming[j] = (vals[order], idx[order])  # tuple of arrays
 
     return incoming
 
 
-def external_value_fast(i, neighbors_of_i, incoming):
+def external_value_fast(i : int, neighbors_of_i: np.ndarray, incoming: dict) -> float:
     first_summand = 0.0
     second_summand = 0.0
 
@@ -120,24 +61,24 @@ def external_value_fast(i, neighbors_of_i, incoming):
     return first_summand + second_summand
 
 
-def shapetrust(A: np.ndarray) -> np.ndarray:
+def shapetrust(A: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     n = A.shape[0]
-    phi = np.zeros(n)
+    internal_phi = np.zeros(n)
+    external_phi = np.zeros(n)
     incoming = precompute_incoming(A)
 
     for i in range(n):
-        phi[i] = internal_value(i, A)
+        internal_phi[i] = internal_value(i, A)
 
         neighbors_of_i = np.where(np.isfinite(A[i, :]))[0]
-        phi[i] += external_value_fast(i, neighbors_of_i, incoming)
+        external_phi[i] += external_value_fast(i, neighbors_of_i, incoming)
 
-    return phi
+    return internal_phi, external_phi
 
-import numpy as np
-from numba import njit, prange
+from numba import njit, prange # type: ignore
 
 @njit
-def precompute_incoming_numba(A):
+def precompute_incoming_numba(A, max= False):
     n = A.shape[0]
     incoming_vals = []
     incoming_idx = []
@@ -146,7 +87,9 @@ def precompute_incoming_numba(A):
         idx = np.where(np.isfinite(A[:, j]))[0]
         vals = A[idx, j]
 
-        order = np.argsort(vals)
+        order = np.argsort(vals)  # sort in descending order
+        if max:
+            order = order[::-1]
         incoming_vals.append(vals[order])
         incoming_idx.append(idx[order])
 
@@ -218,14 +161,15 @@ def external_value_numba(i, neighbors, incoming_vals, incoming_idx):
 
 
 @njit(parallel=True)
-def shapetrust_numba(A):
+def shapetrust_numba(A, max=False):
     n = A.shape[0]
-    phi = np.zeros(n)
-    
-    incoming_vals, incoming_idx = precompute_incoming_numba(A)
+    internal_phi = np.zeros(n)
+    external_phi = np.zeros(n)
 
-    for i in prange(n):  # 🔥 parallel
-        phi_i = internal_value_numba(i, A)
+    incoming_vals, incoming_idx = precompute_incoming_numba(A, max=max)
+
+    for i in prange(n):
+        internal_phi[i] = internal_value_numba(i, A)
 
         # neighbors
         neighbors = []
@@ -233,7 +177,6 @@ def shapetrust_numba(A):
             if np.isfinite(A[i, j]):
                 neighbors.append(j)
 
-        phi_i += external_value_numba(i, neighbors, incoming_vals, incoming_idx)
-        phi[i] = phi_i
+        external_phi[i] = external_value_numba(i, np.array(neighbors), incoming_vals, incoming_idx)
 
-    return phi
+    return internal_phi, external_phi

@@ -1,6 +1,8 @@
 {
   // Reproducibility
   seed: 123,
+  // Or run multiple times:
+  // seed: [123, 456, 789],
 
   // Main loop
   n_steps: 1000,
@@ -17,8 +19,8 @@
 
   // Seller selection
   selection: {
-    // mode: "softmax", // "softmax" or "argmax"
-    mode: "argmax",
+    mode: "softmax", // "softmax" or "argmax"
+    // mode: "argmax",
     alpha: 0.7,
     beta: 8.0,
   },
@@ -36,15 +38,15 @@
   },
 
   global_trust: {
-    // mode: "mean", // "mean", "shape", or "eigen"
-    // mode: "shape",
-    // For mode: "eigen" add:
-    mode: "eigen",
-    alpha: 0.15,
-    percentage: 0.2,
-  },
+    mode: "mean",
 
-  q_min_good: 0.7,
+    // mode: "shape",
+    // alpha: "None",
+
+    // mode: "eigen",
+    // alpha: 0.15,
+    // percentage: 0.2,
+  },
 
   // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
   peers: [
@@ -64,7 +66,7 @@
       kind: "MaliciousBasicPeer",
       count: 2,
       params: {
-        type: "random", // "random" or "fixed"
+        type: "bad_rater", // "honest", "random", or "bad_rater"
       },
     },
     {

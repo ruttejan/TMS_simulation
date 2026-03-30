@@ -13,7 +13,7 @@ import argparse
 import json
 from pathlib import Path
 
-from tms_sim import load_experiment_config, run_experiment
+from tms_sim import load_experiment_configs, run_experiment
 
 
 
@@ -34,25 +34,52 @@ def main() -> int:
     parser.add_argument("--out", type=str, default=None, help="Optional output directory")
     args = parser.parse_args()
 
-    # Load experiment config and run the simulation.
-    cfg = load_experiment_config(args.setup)
-    result = run_experiment(cfg)
+    # Load experiment config(s) and run the simulation(s).
+    cfgs = load_experiment_configs(args.setup)
 
-    # Print summary stats to console.
-    print("Experiment finished")
-    print(json.dumps(result.stats, indent=2))
-
-    # Optionally write outputs to files.
+    out_root: Path | None
     if args.out:
-        out_dir = Path(args.out)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / "summary.json").write_text(json.dumps(result.stats, indent=2), encoding="utf-8")
-        # Keep transactions optional; can be large.
-        tx_path = out_dir / "transactions.jsonl"
-        with tx_path.open("w", encoding="utf-8") as f:
-            for tx in result.transactions:
-                f.write(json.dumps(tx.__dict__) + "\n")
-        print(f"Wrote outputs to {out_dir}")
+        out_root = Path(args.out)
+        out_root.mkdir(parents=True, exist_ok=True)
+    else:
+        out_root = None
+
+    multi = len(cfgs) > 1
+
+    for i, cfg in enumerate(cfgs, start=1):
+        run_out: Path | None
+        if out_root is None:
+            run_out = None
+        else:
+            mode_out = out_root / str(cfg.global_trust.mode)
+            mode_out.mkdir(parents=True, exist_ok=True)
+
+            if multi:
+                run_out = mode_out / f"seed_{cfg.seed}"
+                run_out.mkdir(parents=True, exist_ok=True)
+            else:
+                run_out = mode_out
+
+        plot_path = None
+        if run_out is not None:
+            plot_path = run_out / f"{cfg.global_trust.mode}_min_{cfg.n_steps}.png"
+
+        result = run_experiment(cfg, plot_path=plot_path)
+
+        # Print summary stats to console.
+        label = f"Run {i}/{len(cfgs)} (seed={cfg.seed})" if multi else "Experiment finished"
+        print(label)
+        print(json.dumps(result.stats, indent=2))
+
+        # Optionally write outputs to files.
+        if run_out is not None:
+            (run_out / "summary.json").write_text(json.dumps(result.stats, indent=2), encoding="utf-8")
+            # Keep transactions optional; can be large.
+            tx_path = run_out / "transactions.jsonl"
+            with tx_path.open("w", encoding="utf-8") as f:
+                for tx in result.transactions:
+                    f.write(json.dumps(tx.__dict__) + "\n")
+            print(f"Wrote outputs to {run_out}")
 
     return 0
 

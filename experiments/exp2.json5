@@ -1,0 +1,118 @@
+{
+  // Reproducibility
+  seed: [123, 124, 125, 126, 127],
+
+  // Main loop
+  n_steps: 2000,
+  receivers_per_step: {
+    min_count: 3,
+    max_count: 6,
+  },
+
+  // Candidate seller sampling
+  candidates: {
+    min_count: 3,
+    max_count: 10,
+  },
+
+  // Seller selection
+  selection: {
+    mode: "softmax", // "softmax" or "argmax"
+    // mode: "argmax",
+    alpha: 0.2,
+    beta: 8.0,
+  },
+
+  // Price model
+  price: {
+    mu: 0.0,
+    sigma: 0.6,
+    r_max: 10.0,
+  },
+
+  // Decay parameter (supports "lambda" or "lambd")
+  decay: {
+    lambda: 0.02,
+  },
+
+  global_trust: {
+    // mode: "mean", // "mean", "shape", or "eigen"
+    mode: "shape",
+    alpha: "None",
+    // For mode: "eigen" add:
+    // mode: "eigen",
+    // alpha: 0.15,
+    // percentage: 0.2,
+  },
+
+  // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
+  peers: [
+    {
+      kind: "HonestNormalPeer",
+      count: 50,
+    },
+    {
+      kind: "HonestSupremePeer",
+      count: 30,
+    },
+    {
+      kind: "MaliciousRaterPeer",
+      count: 4,
+    },
+    {
+      kind: "MaliciousBasicPeer",
+      count: 2,
+      params: {
+        type: "bad_rater", // "honest", "random", or "bad_rater"
+      },
+    },
+    {
+      kind: "FreeRiderPeer",
+      count: 2,
+    },
+    {
+      kind: "FreeRiderBuyerPeer",
+      count: 2,
+    },
+    {
+      kind: "CollusiveBasicPeer",
+      count: 10,
+      params: {
+        colluder_ids: "range(90, 110)", // IDs of the colluding peers (88 - 107)
+        quality: 1, // False
+      },
+    },
+    {
+      kind: "CollusiveTargetingPeer",
+      count: 10,
+      params: {
+        colluder_ids: "range(90, 110)", // IDs of the colluding peers (88 - 107)
+        target_seller_ids: "range(0, 20)", // ID of the peer they are targeting (0 - 79)
+        quality: 1, // False
+      },
+    },
+    {
+        kind: "TraitorPeer",
+        count: 5,
+        params: {
+            betrayal_period: 100, // Number of steps after which the traitor will betray
+            periodic: false, // If false, the traitor will betray only on high-value transactions
+        },
+    },
+    {
+      kind: "SybilAccountPeer",
+      count: 20,
+      params:{
+          main_account_id: 85, // ID of the main account they are sybil attacking
+      }
+    },
+    {
+        kind: "TraitorPeer",
+        count: 5,
+        params: {
+            betrayal_period: 100, // Number of steps after which the traitor will betray
+            periodic: true, // If true, the traitor will betray every 'betrayal_period' steps
+        },
+    },
+  ],
+}
