@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import math
 import random
 
 @dataclass
@@ -21,9 +20,8 @@ class RunningMean:
 class PriceHandler:
     """Handles price-related computations, such as maintaining a running mean price and computing price weights."""
     
-    def __init__(self, mu: float, sigma: float, r_max: float = 10.0):
+    def __init__(self, mu: float, sigma: float):
         self.price_mean = RunningMean()
-        self.r_max = r_max
         self.mu = mu
         self.sigma = sigma
 
@@ -36,17 +34,7 @@ class PriceHandler:
         return rng.lognormvariate(self.mu, self.sigma)
         
     def weight_from_price(self, price: float) -> float:
-        """Compute bounded price weight $w_k\\in(0,1]$.
-
-        Implements:
-            R_k = p_k / p̄
-            w_k = log(1 + min(R_k, R_max)) / log(1 + R_max)
-
-        Args:
-            price: Transaction price p_k.                
-        Returns:
-            Price weight w_k in (0, 1].
-        """        
+        """Compute a weight from the price relative to the running mean price."""    
         if self.price_mean.count > 0:
             p_bar = self.price_mean.mean
         else:
@@ -55,10 +43,3 @@ class PriceHandler:
             return 1.0
         r = price / p_bar
         return r
-        # if r < 0:
-        #     r = 0.0
-        # r = min(r, self.r_max)
-        # denom = math.log(1.0 + self.r_max)
-        # if denom <= 0:
-        #     return 1.0
-        # return math.log(1.0 + r) / denom

@@ -1,61 +1,66 @@
-"""Aggregate statistical measurements for an experiment.
-
-This module maintains running totals so you can report values like:
-
-- success rate based on ground truth outcomes o_k
-- average reported stars / normalized score
-- good-pick rate (how often a buyer selects an honest seller)
-
-Note: the current Transaction model does not expose explicit honesty indicator
-``z_honest``, so dishonesty rate cannot be measured directly.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from .peers import *
 import numpy as np
-
+from collections import defaultdict
 from .transaction import Transaction
+
+# color, marker per peer class
+_STYLE: dict[type, tuple[str, str, str]] = {
+    HonestNormalPeer:           ("tab:blue",   "o", "HonestNormal"),
+    HonestSupremePeer:          ("tab:cyan",   "^", "HonestSupreme"),
+    MaliciousRaterPeer:         ("tab:orange", "s", "MaliciousRater"),
+    FreeRiderPeer:              ("tab:gray",   "D", "FreeRider"),
+    FreeRiderBuyerPeer:         ("tab:gray",   "d", "FreeRiderBuyer"),
+    TargetingMaliciousRaterPeer:("tab:brown",  "P", "TargetingMaliciousRater"),
+    CollusiveBasicPeer:         ("tab:purple", "p", "CollusiveBasic"),
+    CollusiveTargetingPeer:     ("tab:olive",  "h", "CollusiveTargeting"),
+    SybilAccountPeer:           ("black",      "*", "SybilAccount"),
+}
+_DEFAULT_STYLE = ("tab:green", "o", "Other")
+
+_BASIC_MALICIOUS_STYLES = {
+    "bad_rater" : ("tab:red", "s", "MaliciousBasic - Bad Rater"),
+    "honest" : ("tab:red", "X", "MaliciousBasic - Honest"),
+    "inverse" : ("tab:red", "P", "MaliciousBasic - Inverse"),
+}
+
+# For traitors, we use different colors for periodic traitors vs traitor that cheat on big transactions
+_TRAITOR_STYLES = { 
+    True : ("tab:pink", "v", "Traitor - Periodic"),
+    False : ("tab:pink", "X", "Traitor - Big Transactions"),
+}
+
+def get_peer_style(peer: Peer) -> tuple[str, str, str]:
+    """Get the color and marker style for a given peer based on its class and parameters."""
+    if isinstance(peer, MaliciousBasicPeer):
+        return _BASIC_MALICIOUS_STYLES.get(peer.type, _DEFAULT_STYLE)
+    elif isinstance(peer, TraitorPeer):
+        return _TRAITOR_STYLES.get(peer.periodic, _DEFAULT_STYLE)
+    else:
+        return _STYLE.get(type(peer), _DEFAULT_STYLE)
+
 
 def plot_global_trust(peers: list[Peer], global_values: list[float] | np.ndarray, filename: str) -> None:
     """Plot global trust values over time and save to file.
 
     Each peer type is assigned a distinct color and marker shape.
     """
-    
-
-    # color, marker per peer class
-    _STYLE: dict[type, tuple[str, str]] = {
-        HonestNormalPeer:           ("tab:blue",   "o"),
-        HonestSupremePeer:          ("tab:cyan",   "^"),
-        MaliciousBasicPeer:         ("tab:red",    "X"),
-        MaliciousRaterPeer:         ("tab:orange", "s"),
-        FreeRiderPeer:              ("tab:gray",   "D"),
-        FreeRiderBuyerPeer:         ("tab:gray",   "d"),
-        TargetingMaliciousRaterPeer:("tab:brown",  "P"),
-        TraitorPeer:                ("tab:pink",   "v"),
-        CollusiveBasicPeer:         ("tab:purple", "p"),
-        CollusiveTargetingPeer:     ("tab:olive",  "h"),
-        SybilAccountPeer:           ("black",      "*"),
-    }
-    _DEFAULT_STYLE = ("tab:green", "o")
 
     # Group peer indices by type so each group gets one legend entry.
-    from collections import defaultdict
-    groups: dict[type, list[int]] = defaultdict(list)
+    groups: dict[str, list[int]] = defaultdict(list)
     for i, peer in enumerate(peers):
-        groups[type(peer)].append(i)
+        groups[str(peer)].append(i)
 
     fig, ax = plt.subplots(figsize=(9, 5))
-    for peer_cls, indices in groups.items():
-        color, marker = _STYLE.get(peer_cls, _DEFAULT_STYLE)
+    for _, indices in groups.items():
+        # color, marker = _STYLE.get(peer_cls, _DEFAULT_STYLE)
+        color, marker, label = get_peer_style(peers[indices[0]])
         xs = indices
         ys = [global_values[i] for i in indices]
-        ax.scatter(xs, ys, c=color, marker=marker, label=peer_cls.__name__, zorder=3)
+        ax.scatter(xs, ys, c=color, marker=marker, label=label, zorder=3)
         
     # get sybil main account index and plot a circle around it
     sybil_main_accounts = set([peer.main_account_id for peer in peers if isinstance(peer, SybilAccountPeer)])
@@ -65,28 +70,31 @@ def plot_global_trust(peers: list[Peer], global_values: list[float] | np.ndarray
     ax.set_xlabel("Peer ID")
     ax.set_ylabel("Global Trust Value")
     ax.set_title("Global Trust Values of Peers")
-    ax.legend(loc="best", fontsize=8)
+    ax.legend(loc="best", fontsize=8, framealpha=0)
     ax.set_xticks([x for x in range(len(peers)) if x % 10 == 0])
     ax.grid(True, linestyle="--", alpha=0.5, zorder=0)
     fig.tight_layout()
     fig.savefig(filename)
     plt.close(fig)
-
-
+    
 class Stats:
     """Streaming (online) aggregation of experiment metrics."""
-
-    total_normal: int = 0
-    total_collusive: int = 0
-    succ: int = 0
-    good_pick: int = 0
-    bad_pick: int = 0
-    bad_pick_dict: dict[str, int] = {}
-    other_pick: int = 0
-    # Kept for backward compatibility in snapshot output.
-    dishonest: int = 0
-    sum_r: float = 0.0
-    sum_s: float = 0.0
+    
+    def __init__(self, n) -> None:
+        """Initialize all counters to zero."""
+        self.total_normal = 0
+        self.total_collusive = 0
+        self.succ = 0
+        self.dishonest = 0
+        self.sum_r = 0.0
+        self.sum_s = 0.0
+        self.good_pick = 0
+        self.bad_pick = 0
+        self.other_pick = 0
+        self.bad_pick_dict = {}
+        self.sellers_distribution = np.zeros(n)
+        self.buyers_distribution = np.zeros(n)
+        
     
 
     def update_normal(self, tx: Transaction) -> None:
@@ -108,6 +116,10 @@ class Stats:
         if int(tx.outcome_ok) == 1 and tx.rating is not None and tx.rating < 3:
             self.dishonest += 1
             
+        # Update seller and buyer distribution
+        self.sellers_distribution[tx.seller] += 1
+        self.buyers_distribution[tx.buyer] += 1
+            
     def update_collusive(self) -> None:
         """ Update collusive transaction counter"""
         self.total_collusive += 1
@@ -121,7 +133,7 @@ class Stats:
             self.good_pick += 1
         else:
             self.bad_pick += 1
-            pick_type = type(pick).__name__
+            pick_type = str(pick)
             self.bad_pick_dict[pick_type] = self.bad_pick_dict.get(pick_type, 0) + 1
 
     def snapshot(self) -> dict:
@@ -161,3 +173,18 @@ class Stats:
         self.bad_pick = 0
         self.other_pick = 0
         self.bad_pick_dict = {}
+        
+    def plot_seller_buyer_distribution(self, filename: str) -> None:
+        """Plot the distribution of transactions across sellers and buyers."""
+        fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+        ax[0].bar(range(len(self.sellers_distribution)), self.sellers_distribution, color="tab:blue")
+        ax[0].set_xlabel("Seller ID")
+        ax[0].set_ylabel("Number of Transactions")
+        ax[0].set_title("Distribution of Transactions Across Sellers")
+        ax[1].bar(range(len(self.buyers_distribution)), self.buyers_distribution, color="tab:orange")
+        ax[1].set_xlabel("Buyer ID")
+        ax[1].set_ylabel("Number of Transactions")
+        ax[1].set_title("Distribution of Transactions Across Buyers")
+        fig.tight_layout()
+        fig.savefig(filename)
+        plt.close(fig)

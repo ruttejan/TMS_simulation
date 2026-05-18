@@ -1,51 +1,54 @@
 {
   // Reproducibility
-  seed: 123,
+  // seed: 456,
   // Or run multiple times:
-  // seed: [123, 456, 789],
+  seed: [123, 456, 789],
 
   // Main loop
-  n_steps: 1000,
+  n_steps: 4000,
   receivers_per_step: {
-    min_count: 3,
-    max_count: 6,
+    min_count: 10,
+    max_count: 20,
   },
 
   // Candidate seller sampling
   candidates: {
     min_count: 3,
-    max_count: 10,
+    max_count: 5,
   },
 
   // Seller selection
   selection: {
     mode: "softmax", // "softmax" or "argmax"
     // mode: "argmax",
-    alpha: 0.7,
-    beta: 8.0,
+    theta: 0.2,
+    beta: 2.0,
+  },
+
+  normalization: {
+    mode: "positive", // "positive" or "negative"
   },
 
   // Price model
   price: {
     mu: 0.0,
     sigma: 0.6,
-    r_max: 10.0,
   },
 
-  // Decay parameter (supports "lambda" or "lambd")
+  // Decay parameter
   decay: {
-    lambda: 0.02,
+    lambda: 1.02,
   },
 
+  // Run all three global trust algorithms in one experiment file.
+  // Per-mode overrides are supported; each entry can be a string or an object
+  // with mode-specific parameters.
   global_trust: {
-    mode: "mean",
-
-    // mode: "shape",
-    // alpha: "None",
-
-    // mode: "eigen",
-    // alpha: 0.15,
-    // percentage: 0.2,
+    modes: [
+      "mean",
+      {mode: "shape", tau: "None"},
+      {mode: "eigen", alpha: 0.15, percentage: 0.2},
+    ],
   },
 
   // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
@@ -66,12 +69,27 @@
       kind: "MaliciousBasicPeer",
       count: 2,
       params: {
-        type: "bad_rater", // "honest", "random", or "bad_rater"
+        type: "bad_rater", // "honest", "inverse", or "bad_rater"
       },
     },
     {
       kind: "FreeRiderPeer",
       count: 2,
     },
+    {
+      kind: "TraitorPeer",
+      count: 2,
+      params: {
+        betrayal_gap: 9, // Number of honest transactions before betrayal
+        periodic: true, // If true, betrays every betrayal_gap transactions; if false, betrays on big transactions
+      },
+    },
+    {
+      kind: "TraitorPeer",
+      count: 2,
+      params: {
+        periodic: false, // If true, betrays every betrayal_gap transactions; if false, betrays on big transactions
+      },
+    }
   ],
 }

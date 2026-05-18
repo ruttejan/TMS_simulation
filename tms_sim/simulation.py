@@ -1,24 +1,9 @@
-"""Main simulation loop.
-
-Implements the non-Appendix parts of `ideas/simulation_overview.md`:
-
-- At each time step, sample a set of buyers (receivers)
-- For each buyer, sample candidate sellers and select one using a mixed score
-- Simulate the transaction: outcome -> truthful stars -> (possibly) inverted report
-- Normalize stars to [0,1]
-- Apply price-based weight and exponential time decay
-- Update local trust T_ij and global seller reputation G_j
-- Update aggregate statistics
-
-Important simplification: peers are always online (no churn).
-"""
-
-import json
-import math
 import random
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
+import pandas as pd
+
 
 from .config import ExperimentConfig
 from .distributions import clamp01
@@ -29,6 +14,11 @@ from .peers import *
 from .transaction import Transaction, evaluate_transaction
 from .local_trust import LocalTrustStore
 from .global_trust import GlobalTrustStore, SHAPETrustStore, EigenTrustStore
+
+
+########################################################
+# SUPPORT METHODS
+########################################################
 
 
 def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer], list[int], list[int], list[int]]:
@@ -54,11 +44,10 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
             raise ValueError(f"Unknown peer kind: {kind!r}")
 
         if kind == "Peer":
-            if spec_q is None or spec_h is None:
-                raise ValueError("Peer entries require both q and h")
+            if spec_q is None:
+                raise ValueError("Peer entries require q")
             q = clamp01(spec_q.sample(rng))
-            h = clamp01(spec_h.sample(rng))
-            return Peer(peer_id=peer_id, q=q, h=h, rng=rng)
+            return Peer(peer_id=peer_id, q=q, rng=rng)
 
         ctor = peer_types[kind]
         return ctor(peer_id=peer_id, rng=rng, **params)
@@ -100,23 +89,49 @@ class ExperimentResult:
     
 def create_global_trust_store(cfg: ExperimentConfig, n: int, peers: list[Peer], rng: random.Random) -> GlobalTrustStore:
     """Factory for global trust store based on config."""
+    options = cfg.global_trust.options
+
     if cfg.global_trust.mode == "mean":
         return GlobalTrustStore(n=n)
     elif cfg.global_trust.mode == "shape":
-        if cfg.global_trust.alpha is not None:
-            return SHAPETrustStore(n=n, alpha=cfg.global_trust.alpha)
-        return SHAPETrustStore(n=n, alpha=None)
+        tau = options.get("tau", None)
+        if tau == "None":
+            tau = None
+        elif tau is not None:
+            tau = float(tau)
+        return SHAPETrustStore(n=n, tau=tau)
     elif cfg.global_trust.mode == "eigen":
         # select pretrusted peers randomly from honest peers (with percentage specified in config)
         honest_peers = [peer for peer in peers if isinstance(peer, (HonestNormalPeer, HonestSupremePeer))]
-        n_pretrusted = int(len(honest_peers) * cfg.global_trust.percentage)
-        n_pretrusted = max(0, min(n_pretrusted, len(honest_peers)))
+        percentage = float(options.get("percentage", options.get("pretrusted_percentage", 0.05)))
+        if not 0.0 <= percentage <= 1.0:
+            raise ValueError("global_trust percentage must be in [0, 1]")
+
+        alpha = float(options.get("alpha", 0.15))
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("global_trust alpha must be in [0, 1]")
+
+        n_pretrusted = int(len(honest_peers) * percentage)
+        n_pretrusted = max(2, min(n_pretrusted, len(honest_peers)))
         pretrusted = rng.sample(honest_peers, k=n_pretrusted) if n_pretrusted > 0 else []
         pretrusted_ids = [peer.peer_id for peer in pretrusted]
-        alpha = cfg.global_trust.alpha
         return EigenTrustStore(n=n, pretrusted=pretrusted_ids, alpha=alpha)
     else:
         raise ValueError(f"Unknown global trust mode: {cfg.global_trust.mode!r}")
+    
+def check_global_trust_store_vs_normalization(global_trust: GlobalTrustStore, normalization_mode: str) -> bool:
+    """
+    Check if the global trust store is compatible with the normalization mode.
+    
+    EigenTrustStore needs to be used with "negative" normalization mode, because it produces values in the range [-1, 1].
+    """
+    if isinstance(global_trust, EigenTrustStore) and normalization_mode != "negative":
+        return False
+    return True
+
+########################################################
+# END OF SUPPORT METHODS
+########################################################
 
 
 def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None) -> ExperimentResult:
@@ -144,15 +159,21 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
         raise ValueError("Need at least 2 peers")
 
     # Initialize components.
-    price_handler = PriceHandler(r_max=cfg.price.r_max, mu=cfg.price.mu, sigma=cfg.price.sigma)
+    price_handler = PriceHandler(mu=cfg.price.mu, sigma=cfg.price.sigma)
 
     local_trust = LocalTrustStore(n=n, lambd=cfg.decay.lambd)
     
     global_trust = create_global_trust_store(cfg, n=n, peers=peers, rng=rng)
 
-    selector = SellerSelection(mode=cfg.selection.mode, alpha=cfg.selection.alpha, beta=cfg.selection.beta)
+    selector = SellerSelection(mode=cfg.selection.mode, theta=cfg.selection.theta, beta=cfg.selection.beta)
     
-    stats = Stats()
+    if not check_global_trust_store_vs_normalization(global_trust, cfg.normalization.mode):
+        normalization_mode = "negative"  # Force compatible normalization mode
+    else:
+        normalization_mode = cfg.normalization.mode
+    
+    stats = Stats(n=n)
+    stats.reset()
     transactions: list[Transaction] = []
     
     # delete sybil accounts from all_peers to prevent them from being selected as buyers or sellers in the main loop
@@ -166,6 +187,10 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
     sellers_blacklist = sybil_accounts_ids + freeriding_buyer_ids 
 
     for t in range(1, cfg.n_steps + 1):
+        # Show progress every 10%
+        if t % max(1, cfg.n_steps // 10) == 0:
+            progress = (t / cfg.n_steps) * 100
+            print(f"\rProgress: {progress:.1f}%", end="", flush=True)
         
         # Make transactions between colluders and between sybil accounts 
         # and their main account.
@@ -180,11 +205,11 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
                         seller=peers[colluder_id],
                         t=t,
                         price_handler=price_handler,
-                        rng=rng
+                        rng=rng,
+                        norm=normalization_mode
                     )
                     local_trust.update(buyer=peer_id, seller=colluder_id, t=t, weight=tx.price_weight, score=tx.s_norm)
                     stats.update_collusive()
-                    # transactions.append(tx)
             for peer_id in sybil_accounts_ids:
                 peer = peers[peer_id]
                 if not isinstance(peer, SybilAccountPeer):
@@ -195,15 +220,15 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
                     seller=peers[main_account_id],
                     t=t,
                     price_handler=price_handler,
-                    rng=rng
+                    rng=rng,
+                    norm=normalization_mode
                 )
                 local_trust.update(buyer=peer_id, seller=main_account_id, t=t, weight=tx.price_weight, score=tx.s_norm)
                 stats.update_collusive()
-                # transactions.append(tx)
         
         # Sample how many buyers act this step from the configured interval.
         receivers = sample_peer_ids(rng, n, buyers_blacklist, cfg.receivers.min_count, cfg.receivers.max_count)
-
+        
         for buyer in receivers:
             
             candidates = sample_peer_ids(rng, n, sellers_blacklist, cfg.candidates.min_count, cfg.candidates.max_count)
@@ -221,13 +246,8 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
             seller = None
             while seller is None and candidates != []:
                 seller = selector.select(buyer=buyer, candidates=candidates, local_trust=lt, global_trust=gt, rng=rng)
-                # For now, we assume the selected seller always accepts the transaction.
-                if selector.reject(seller=seller, buyer=buyer, t=t, local_trust=local_trust, global_trust=global_trust):
-                    del candidates[candidates.index(seller)]  # remove selected seller from candidates for next iteration
-                    seller = None  # reset seller to trigger re-selection
-                    
+
             if candidates == [] or seller is None:
-                # print(f"Debug: buyer {buyer} has no more candidates to select at time {t}")
                 continue
             
             stats.update_pick(peers[buyer], peers[seller], [peers[j] for j in candidates])
@@ -238,7 +258,8 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
                 seller=peers[seller],
                 t=t,
                 price_handler=price_handler,
-                rng=rng
+                rng=rng,
+                norm=normalization_mode
             )
 
             # Update local trust stores
@@ -250,14 +271,22 @@ def run_experiment(cfg: ExperimentConfig, *, plot_path: str | Path | None = None
             
         # update global trust values
         global_trust.update(local_trust.get_matrix())
-        # if t == cfg.n_steps / 4 or t == cfg.n_steps / 2 or t == 3 * cfg.n_steps / 4:
-        #     print(f"Stats at step {t}:")
-        #     print(json.dumps(stats.snapshot(), indent=2))
-            # stats.reset()
+    print()  # New line after progress bar completes
+        
+    # get the output folder path from plot_path if provided, otherwise use current directory
+    output_folder = Path(plot_path).parent if plot_path is not None else Path(".")
+    # save final global trust values to csv
+    gt_df = pd.DataFrame({
+        "global_trust": global_trust.global_values,
+    })
+    
+    gt_df.to_csv(f"{output_folder}/global_trust.csv", index=False)
 
     if plot_path is None:
-        plot_file = f"{cfg.global_trust.mode}_min_{cfg.n_steps}_seed_{cfg.seed}.png"
+        plot_file = f"{cfg.global_trust.mode}_seed_{cfg.seed}.png"
     else:
         plot_file = str(Path(plot_path))
     plot_global_trust(peers, global_values=global_trust.global_values, filename=plot_file)
+    stats.plot_seller_buyer_distribution(filename=plot_file.replace(".png", "_distribution.png"))
+    
     return ExperimentResult(config=cfg, stats=stats.snapshot(), transactions=transactions)

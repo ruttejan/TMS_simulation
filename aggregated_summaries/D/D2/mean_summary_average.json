@@ -1,0 +1,51 @@
+{
+  "algorithm": "mean",
+  "source_dir": "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean",
+  "num_summaries": 10.0,
+  "averages": {
+    "total_normal": 49964.4,
+    "total_collusive": 0.0,
+    "succ_rate": 0.9235,
+    "dishon_rate": 0.0553,
+    "avg_rating": 3.7887,
+    "avg_score": 0.7577,
+    "good_pick_rate": 0.4986,
+    "bad_pick_rate": 0.157,
+    "other_pick_rate": 0.3444,
+    "bad_pick_distribution": {
+      "TargetingMaliciousRater": 0.2687,
+      "Traitor(price-based)": 0.2249,
+      "MaliciousRater": 0.277,
+      "Traitor(periodic)": 0.2295
+    }
+  },
+  "stds": {
+    "total_normal": 85.9712,
+    "total_collusive": 0.0,
+    "succ_rate": 0.0014,
+    "dishon_rate": 0.0014,
+    "avg_rating": 0.0063,
+    "avg_score": 0.0013,
+    "good_pick_rate": 0.003,
+    "bad_pick_rate": 0.0018,
+    "other_pick_rate": 0.0025,
+    "bad_pick_distribution": {
+      "TargetingMaliciousRater": 0.0079,
+      "Traitor(price-based)": 0.0061,
+      "MaliciousRater": 0.0072,
+      "Traitor(periodic)": 0.0061
+    }
+  },
+  "summary_files": [
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_123\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_2345\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_2874\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_3456\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_5432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_6789\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_7890\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_8765\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D2\\mean\\seed_9876\\summary.json"
+  ]
+}

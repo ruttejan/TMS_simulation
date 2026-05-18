@@ -1,0 +1,14 @@
+{
+  "total_normal": 50029,
+  "total_collusive": 0,
+  "succ_rate": 0.8510663814987307,
+  "dishon_rate": 0.0840912270882888,
+  "avg_rating": 3.671630454336485,
+  "avg_score": 0.4686521817345653,
+  "good_pick_rate": 0.40452537528233623,
+  "bad_pick_rate": 0.0893881548701753,
+  "other_pick_rate": 0.5060864698474885,
+  "bad_pick_distribution": {
+    "MaliciousBasic(inverse)": 1.0
+  }
+}

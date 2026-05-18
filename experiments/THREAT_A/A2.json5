@@ -1,0 +1,132 @@
+{
+  // Reproducibility
+  seed: [123, 432, 2874, 2345, 9876, 6789, 3456, 7890, 5432, 8765],
+
+  // Main loop
+  n_steps: 4000,
+  receivers_per_step: {
+    min_count: 10,
+    max_count: 15,
+  },
+
+  // Candidate seller sampling
+  candidates: {
+    min_count: 5,
+    max_count: 10,
+  },
+
+  // Seller selection
+  selection: {
+    mode: "softmax", // "softmax" or "argmax"
+    // mode: "argmax",
+    theta: 0,
+    beta: 2.0,
+  },
+
+  // Price model
+  price: {
+    mu: 0.0,
+    sigma: 0.6,
+  },
+
+  normalization: {
+    mode: "positive", // "positive" or "negative"
+  },
+
+  // Decay parameter
+  decay: {
+    lambda: 1.02,
+  },
+
+  global_trust: {
+    modes: [
+      "mean",
+      {mode: "shape", tau: "None"},
+      {mode: "eigen", alpha: 0.1, percentage: 0.05},
+    ],
+  },
+
+  // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
+  peers: [
+    {
+      kind: "HonestNormalPeer",
+      count: 60,
+    },
+    {
+      kind: "HonestSupremePeer",
+      count: 20,
+    },
+    {
+      kind: "MaliciousBasicPeer",
+      count: 20,
+      params: {
+        type: "inverse", // "honest", "inverse", or "bad_rater"
+      },
+    },
+    {
+      kind: "MaliciousRaterPeer",
+      count: 20,
+    },
+    {
+      kind: "MaliciousBasicPeer",
+      count: 20,
+      params: {
+        type: "honest", // "honest", "inverse", or "bad_rater"
+      },
+    },
+    {
+      kind: "TargetingMaliciousRaterPeer",
+      count: 20,
+      params: {
+        target_seller_ids: "range(0,40)", // range of seller IDs to target,
+      },
+    },
+    {
+      kind: "MaliciousBasicPeer",
+      count: 20,
+      params: {
+        type: "bad_rater", // "honest", "inverse", or "bad_rater"
+      },
+    },
+    {
+      kind: "FreeRiderPeer",
+      count: 20,
+    },
+    {
+      kind: "TraitorPeer",
+      count: 20,
+      params: {
+        periodic: true, 
+        betrayal_gap: 9, // Number of honest transactions before betrayal
+      },
+    },
+    {
+      kind: "TraitorPeer",
+      count: 20,
+      params: {
+        periodic: false,
+      },
+    },
+    {
+      kind: "FreeRiderBuyerPeer",
+      count: 20,
+    },
+    {
+      kind: "CollusiveBasicPeer",
+      count: 20,
+      params: {
+        colluder_ids: "range(260, 300)", // IDs of the colluding peers (88 - 107)
+        quality: false,
+      },
+    },
+    {
+      kind: "CollusiveTargetingPeer",
+      count: 20,
+      params: {
+        colluder_ids: "range(260, 300)", // IDs of the colluding peers (88 - 107)
+        target_seller_ids: "range(40, 80)", // ID of the peer they are targeting (0 - 79)
+        quality: false,
+      },
+    },
+  ],
+}

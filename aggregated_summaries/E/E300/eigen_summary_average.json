@@ -1,0 +1,45 @@
+{
+  "algorithm": "eigen",
+  "source_dir": "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen",
+  "num_summaries": 10.0,
+  "averages": {
+    "total_normal": 49974.0,
+    "total_collusive": 120000.0,
+    "succ_rate": 0.9388,
+    "dishon_rate": 0.0045,
+    "avg_rating": 4.2522,
+    "avg_score": 0.7009,
+    "good_pick_rate": 0.0325,
+    "bad_pick_rate": 0.0048,
+    "other_pick_rate": 0.9628,
+    "bad_pick_distribution": {
+      "MaliciousBasic(bad_rater)": 1.0
+    }
+  },
+  "stds": {
+    "total_normal": 86.443,
+    "total_collusive": 0.0,
+    "succ_rate": 0.0013,
+    "dishon_rate": 0.0003,
+    "avg_rating": 0.0063,
+    "avg_score": 0.0025,
+    "good_pick_rate": 0.0011,
+    "bad_pick_rate": 0.0004,
+    "other_pick_rate": 0.001,
+    "bad_pick_distribution": {
+      "MaliciousBasic(bad_rater)": 0.0
+    }
+  },
+  "summary_files": [
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_123\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_2345\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_2874\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_3456\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_5432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_6789\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_7890\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_8765\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\E\\E300\\eigen\\seed_9876\\summary.json"
+  ]
+}

@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def _as_square_matrix(C: np.ndarray) -> np.ndarray:
 	"""Validate and return C as a float square matrix."""
 	C = np.asarray(C, dtype=float)
@@ -10,6 +9,17 @@ def _as_square_matrix(C: np.ndarray) -> np.ndarray:
 	if m != n:
 		raise ValueError("Dimension of given matrix are wrong. (n != m)")
 	return C
+
+
+def _validate_pretrusted_indices(pretrusted: list[int] | np.ndarray, n: int) -> np.ndarray:
+	"""Return pretrusted indices as a unique, validated integer array."""
+
+	pretrusted_arr = np.asarray(pretrusted, dtype=int)
+	if pretrusted_arr.size == 0:
+		return pretrusted_arr
+	if np.any(pretrusted_arr < 0) or np.any(pretrusted_arr >= n):
+		raise IndexError("pretrusted index out of range")
+	return np.unique(pretrusted_arr)
 
 
 def normalize_trust_matrix(C: np.ndarray, pretrusted: list[int] | np.ndarray) -> np.ndarray:
@@ -26,10 +36,10 @@ def normalize_trust_matrix(C: np.ndarray, pretrusted: list[int] | np.ndarray) ->
 	C = _as_square_matrix(C).copy()
 	n = C.shape[0]
 
-	pretrusted = np.asarray(pretrusted, dtype=int)
+	pretrusted_arr = _validate_pretrusted_indices(pretrusted, n)
 	fallback = np.zeros(n, dtype=float)
-	if pretrusted.size > 0:
-		fallback[pretrusted] = 1.0 / pretrusted.size
+	if pretrusted_arr.size > 0:
+		fallback[pretrusted_arr] = 1.0 / pretrusted_arr.size
 	else:
 		fallback = np.ones(n, dtype=float) / n
 
@@ -54,24 +64,25 @@ def eigentrust_iteration(
 
 	C = _as_square_matrix(C)
 	n = C.shape[0]
- 
+	trust_v_arr: np.ndarray
+
 	C = normalize_trust_matrix(C, pretrusted=[])  # Normalize without pretrusted fallback
 
 	if trust_v is None:
-		trust_v = np.ones(n, dtype=float) / n
+		trust_v_arr = np.ones(n, dtype=float) / n
 	else:
-		trust_v = np.asarray(trust_v, dtype=float)
-		if trust_v.ndim != 1 or trust_v.shape[0] != n:
+		trust_v_arr = np.asarray(trust_v, dtype=float)
+		if trust_v_arr.ndim != 1 or trust_v_arr.shape[0] != n:
 			raise ValueError("Initial trust_v must be a vector of length n.")
 
 	for i in range(max_iter):
-		trust_v_new = C.T @ trust_v
-		delta = np.linalg.norm(trust_v_new - trust_v)
-		trust_v = trust_v_new
+		trust_v_new = C.T @ trust_v_arr
+		delta = np.linalg.norm(trust_v_new - trust_v_arr)
+		trust_v_arr = trust_v_new
 		if delta < eps:
 			break
 
-	return trust_v
+	return trust_v_arr
 
 
 def eigentrust(
@@ -84,28 +95,30 @@ def eigentrust(
 	"""Basic EigenTrust implementation with pretrusted peers."""
 	if eps < 0:
 		raise ValueError("Epsilon is a negative number.")
+	if not 0.0 <= alpha <= 1.0:
+		raise ValueError("alpha must be in the range [0, 1].")
 
 	C = _as_square_matrix(C)
 	n = C.shape[0]
 
-	pretrusted = np.asarray(pretrusted, dtype=int)
-	num_pretrusted = pretrusted.size
+	pretrusted_arr = _validate_pretrusted_indices(pretrusted, n)
+	num_pretrusted = pretrusted_arr.size
 	if num_pretrusted == 0 or alpha == 0.0:
 		return eigentrust_iteration(C, eps=eps, max_iter=max_iter)
 
-	C = normalize_trust_matrix(C, pretrusted)
+	C = normalize_trust_matrix(C, pretrusted_arr)
 	# check if rows sum to 1
 	row_sums = C.sum(axis=1)
 	if not np.allclose(row_sums, 1.0):
 		raise ValueError("Row normalization failed: rows do not sum to 1.")
 
 	rho = np.zeros(n, dtype=float)
-	rho[pretrusted] = 1.0 / num_pretrusted
+	rho[pretrusted_arr] = 1.0 / num_pretrusted
 	
 
 	trust_v = rho.copy()
 	for i in range(max_iter):
-      	# check if C contains infs or nans
+		# check if C contains infs or nans
 		if np.isnan(C).any() or np.isinf(C).any():
 			raise ValueError("Trust matrix contains NaN or Inf values.")
 		# check if trust_v contains infs or nans

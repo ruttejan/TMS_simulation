@@ -1,0 +1,51 @@
+{
+  "algorithm": "eigen",
+  "source_dir": "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen",
+  "num_summaries": 10.0,
+  "averages": {
+    "total_normal": 49934.5,
+    "total_collusive": 0.0,
+    "succ_rate": 0.9225,
+    "dishon_rate": 0.0508,
+    "avg_rating": 3.8032,
+    "avg_score": 0.5712,
+    "good_pick_rate": 0.4881,
+    "bad_pick_rate": 0.1686,
+    "other_pick_rate": 0.3432,
+    "bad_pick_distribution": {
+      "MaliciousRater": 0.2503,
+      "Traitor(periodic)": 0.2513,
+      "Traitor(price-based)": 0.2511,
+      "TargetingMaliciousRater": 0.2473
+    }
+  },
+  "stds": {
+    "total_normal": 115.2079,
+    "total_collusive": 0.0,
+    "succ_rate": 0.0011,
+    "dishon_rate": 0.0008,
+    "avg_rating": 0.0071,
+    "avg_score": 0.0026,
+    "good_pick_rate": 0.0026,
+    "bad_pick_rate": 0.0016,
+    "other_pick_rate": 0.0022,
+    "bad_pick_distribution": {
+      "MaliciousRater": 0.0058,
+      "Traitor(periodic)": 0.0051,
+      "Traitor(price-based)": 0.0045,
+      "TargetingMaliciousRater": 0.0044
+    }
+  },
+  "summary_files": [
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_123\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_2345\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_2874\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_3456\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_5432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_6789\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_7890\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_8765\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\eigen\\seed_9876\\summary.json"
+  ]
+}

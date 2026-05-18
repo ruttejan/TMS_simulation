@@ -1,0 +1,68 @@
+{
+  // Reproducibility
+  seed: [123, 432, 2874, 2345, 9876, 6789, 3456, 7890, 5432, 8765],
+
+  // Main loop
+  n_steps: 4000,
+  receivers_per_step: {
+    min_count: 10,
+    max_count: 15,
+  },
+
+  // Candidate seller sampling
+  candidates: {
+    min_count: 5,
+    max_count: 10,
+  },
+
+  // Seller selection
+  selection: {
+    mode: "softmax", // "softmax" or "argmax"
+    // mode: "argmax",
+    theta: 0,
+    beta: 2.0,
+  },
+
+  // Price model
+  price: {
+    mu: 0.0,
+    sigma: 0.6,
+  },
+
+  normalization: {
+    mode: "positive", // "positive" or "negative"
+  },
+
+  // Decay parameter (supports "lambda" or "lambd")
+  decay: {
+    lambda: 1.02,
+  },
+
+  global_trust: {
+    modes: [
+      "mean",
+      {mode: "shape", tau: "None"},
+      {mode: "eigen", alpha: 0.1, percentage: 0.05},
+    ],
+  },
+
+  // Typed peer specs. 'kind' must match a class from tms_sim/peers.py
+  peers: [
+    {
+      kind: "HonestNormalPeer",
+      count: 120,
+    },
+    {
+      kind: "HonestSupremePeer",
+      count: 30,
+    },
+    {
+      kind: "CollusiveBasicPeer",
+      count: 150,
+      params: {
+        colluder_ids: "range(150, 300)",
+      },
+    },
+    
+  ],
+}

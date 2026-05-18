@@ -1,13 +1,4 @@
-"""Experiment configuration schema and JSON loader.
-
-This module defines the configuration objects that control the simulation run.
-The config is intentionally JSON-based (no external dependencies).
-
-Key idea: peers are defined as typed entries in ``peers`` where each entry maps
-to a class from :mod:`tms_sim.peers`.
-"""
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
 from typing import Any, Mapping, Optional, Tuple
@@ -36,12 +27,12 @@ class SelectionConfig:
     """Seller selection policy.
 
     - ``mode`` chooses greedy argmax vs probabilistic softmax.
-    - ``alpha`` mixes local vs global trust: score = alpha*T_ij + (1-alpha)*G_j.
+    - ``theta`` mixes local vs global trust: score = theta*T_ij + (1-theta)*G_j.
     - ``beta`` is softmax inverse temperature (larger => more greedy).
     """
 
     mode: str = "softmax"  # "softmax" or "argmax"
-    alpha: float = 0.7
+    theta: float = 0.7
     beta: float = 8.0
 
 
@@ -50,8 +41,7 @@ class PriceConfig:
     """Transaction price generation + weighting parameters."""
 
     mu: float = 0.0
-    sigma: float = 1.0
-    r_max: float = 10.0
+    sigma: float = 0.6
 
 
 @dataclass(frozen=True)
@@ -65,20 +55,29 @@ class DecayConfig:
 class GlobalTrustConfig:
     """How global trust is represented in this implementation.
 
-        Supported modes:
-        - ``mean``: arithmetic mean over trust matrix rows.
-        - ``shape``: SHAPETrust algorithm.
-        - ``eigen``: EigenTrust algorithm.
+    Supported modes:
+    - ``mean``: arithmetic mean over trust matrix rows.
+    - ``shape``: SHAPETrust algorithm.
+    - ``eigen``: EigenTrust algorithm.
 
-        For ``eigen`` mode:
-        - ``alpha`` is the damping factor in ``[0, 1]``.
-        - ``percentage`` is the fraction of honest peers sampled as pretrusted,
-            also in ``[0, 1]``.
+    Algorithm-specific options are stored in ``options`` and passed through to
+    the selected trust implementation.
     """
 
     mode: str = "mean"  # "mean", "shape", or "eigen"
-    alpha: float = 0.15
-    percentage: float = 0.1
+    options: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class NormalizationConfig:
+    """How global trust values are normalized.
+
+    Supported modes:
+    - ``positive``: No normalization applied.
+    - ``negative``: Normalize to the interval [-1, 1].
+    """
+
+    mode: str = "negative"  # "positive" or "negative"
 
 
 @dataclass(frozen=True)
@@ -122,6 +121,7 @@ class ExperimentConfig:
     price: PriceConfig = PriceConfig()
     decay: DecayConfig = DecayConfig()
     global_trust: GlobalTrustConfig = GlobalTrustConfig()
+    normalization: NormalizationConfig = NormalizationConfig()
 
     peers: Tuple[PeerSpecConfig, ...] = ()
 
@@ -158,6 +158,7 @@ def _parse_seeds(value: Any) -> list[int]:
             if isinstance(item, bool) or not isinstance(item, int):
                 raise ValueError("seed array must contain only integers")
             seeds.append(int(item))
+        print(f"Parsed seeds: {seeds}")
         return seeds
 
     raise ValueError("seed must be an integer or an array of integers")
@@ -197,7 +198,7 @@ def _parse_receiver_cfg(obj: Any) -> ReceiverConfig:
 def _parse_selection_cfg(obj: Mapping[str, Any]) -> SelectionConfig:
     return SelectionConfig(
         mode=str(obj.get("mode", "softmax")),
-        alpha=float(obj.get("alpha", 0.7)),
+        theta=float(obj.get("theta", 0.7)),
         beta=float(obj.get("beta", 8.0)),
     )
 
@@ -205,21 +206,16 @@ def _parse_selection_cfg(obj: Mapping[str, Any]) -> SelectionConfig:
 def _parse_price_cfg(obj: Mapping[str, Any]) -> PriceConfig:
     return PriceConfig(
         mu=float(obj.get("mu", 0.0)),
-        sigma=float(obj.get("sigma", 1.0)),
-        r_max=float(obj.get("r_max", 10.0)),
+        sigma=float(obj.get("sigma", 0.6)),
     )
 
 
 def _parse_decay_cfg(obj: Mapping[str, Any]) -> DecayConfig:
     """Parse time decay config.
 
-    Accepts either ``{"lambda": ...}`` or ``{"lambd": ...}``.
+    Accepts either ``{"lambda": ...}````.
     """
-
-    # JSON can't use "lambda" comfortably in some editors, so accept both.
-    if "lambda" in obj and "lambd" in obj:
-        raise ValueError("Use only one of 'lambda' or 'lambd'")
-    lambd = obj.get("lambd", obj.get("lambda", 0.02))
+    lambd =  obj.get("lambda", 1.02)
     return DecayConfig(lambd=float(lambd))
 
 
@@ -228,28 +224,23 @@ def _parse_global_trust_cfg(obj: Mapping[str, Any]) -> GlobalTrustConfig:
     if mode not in {"mean", "shape", "eigen"}:
         raise ValueError("global_trust.mode must be one of: 'mean', 'shape', 'eigen'")
 
-    # alpha/percentage are only relevant for eigen mode.
-    if mode == "eigen":
-        alpha = float(obj.get("alpha", 0.15))
-        if not 0.0 <= alpha <= 1.0:
-            raise ValueError("global_trust.alpha must be in [0, 1]")
+    options = {key: value for key, value in obj.items() if key != "mode"}
+    return GlobalTrustConfig(mode=mode, options=options)
 
-        percentage = float(obj.get("percentage", obj.get("pretrusted_percentage", 0.1)))
-        if not 0.0 <= percentage <= 1.0:
-            raise ValueError("global_trust.percentage must be in [0, 1]")
-    elif mode == "shape":
-        alpha = obj.get("alpha", 1.0)
-        if alpha == "None":
-            alpha = None
-        else:
-            alpha = float(alpha)
-        percentage = 0.1
-    else:
-        alpha = 0.15
-        percentage = 0.1
 
-    print(f"Parsed global trust config: mode={mode}, alpha={alpha}, percentage={percentage}")
-    return GlobalTrustConfig(mode=mode, alpha=alpha, percentage=percentage)
+def _parse_normalization_cfg(obj: Mapping[str, Any]) -> NormalizationConfig:
+    """Parse normalization config.
+
+    Supported options:
+    - ``positive``: Normalization to the interval [0, 1]
+    - ``negative``: Normalization to the interval [-1, 1]
+    """
+
+    mode = str(obj.get("mode", "negative")).lower()
+    if mode not in {"positive", "negative"}:
+        raise ValueError("normalization.mode must be one of: 'positive', 'negative'")
+
+    return NormalizationConfig(mode=mode)
 
 
 def _parse_peer_spec_cfg(obj: Mapping[str, Any]) -> PeerSpecConfig:
@@ -339,6 +330,7 @@ def _build_experiment_config(raw: Mapping[str, Any], *, seed: int) -> Experiment
         price=_parse_price_cfg(raw.get("price", {})),
         decay=_parse_decay_cfg(raw.get("decay", {})),
         global_trust=_parse_global_trust_cfg(raw.get("global_trust", {})),
+        normalization=_parse_normalization_cfg(raw.get("normalization", {})),
         peers=peers,
     )
 
@@ -352,7 +344,60 @@ def load_experiment_configs(path: str | Path) -> list[ExperimentConfig]:
 
     raw = _load_experiment_raw(path)
     seeds = _parse_seeds(raw.get("seed", 123))
-    return [_build_experiment_config(raw, seed=s) for s in seeds]
+
+    # Allow specifying multiple global trust algorithms to run in one config file.
+    # Supported forms:
+    # - global_trust.mode: single string (legacy)
+    # - global_trust.modes: array of strings, e.g. ["mean", "shape", "eigen"]
+    # - global_trust.modes: array of objects for per-mode overrides, e.g.
+    #     [{mode: "shape", alpha: "None"}, {mode: "eigen", alpha: 0.15}]
+    gt_raw = raw.get("global_trust", {}) if isinstance(raw, Mapping) else {}
+
+    modes_list: list = []
+    if isinstance(gt_raw, Mapping):
+        if "modes" in gt_raw:
+            raw_modes = gt_raw.get("modes")
+        elif "mode" in gt_raw:
+            raw_modes = gt_raw.get("mode")
+        else:
+            raw_modes = None
+
+        if raw_modes is None:
+            modes_list = []
+        elif isinstance(raw_modes, (list, tuple)):
+            modes_list = list(raw_modes)
+        else:
+            # single string or single mapping
+            modes_list = [raw_modes]
+
+    # Normalize to at least one entry, default to mean
+    if not modes_list:
+        modes_list = ["mean"]
+
+    configs: list[ExperimentConfig] = []
+    for s in seeds:
+        for mode_entry in modes_list:
+            raw_for_mode = dict(raw)
+            base_gt = dict(raw_for_mode.get("global_trust", {}))
+
+            if isinstance(mode_entry, Mapping):
+                if "mode" not in mode_entry:
+                    raise ValueError("Each mode object in global_trust.modes must include a 'mode' key")
+                mode_name = str(mode_entry["mode"]).lower()
+                gt_copy = dict(base_gt)
+                # Merge overrides from the mode entry (strings/numbers as provided)
+                for k, v in mode_entry.items():
+                    gt_copy[k] = v
+                gt_copy["mode"] = mode_name
+            else:
+                mode_name = str(mode_entry).lower()
+                gt_copy = dict(base_gt)
+                gt_copy["mode"] = mode_name
+
+            raw_for_mode["global_trust"] = gt_copy
+            configs.append(_build_experiment_config(raw_for_mode, seed=s))
+
+    return configs
 
 
 def load_experiment_config(path: str | Path) -> ExperimentConfig:

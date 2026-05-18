@@ -1,0 +1,17 @@
+{
+  "total_normal": 49968,
+  "total_collusive": 0,
+  "succ_rate": 0.9164865513928915,
+  "dishon_rate": 0.061639449247518414,
+  "avg_rating": 3.734470060838937,
+  "avg_score": 0.746894012167725,
+  "good_pick_rate": 0.5031820365033621,
+  "bad_pick_rate": 0.15125680435478706,
+  "other_pick_rate": 0.34556115914185076,
+  "bad_pick_distribution": {
+    "TargetingMaliciousRater": 0.28340830907647524,
+    "Traitor(periodic)": 0.18946811325747553,
+    "Traitor(price-based)": 0.23021963482402752,
+    "MaliciousRater": 0.2969039428420217
+  }
+}

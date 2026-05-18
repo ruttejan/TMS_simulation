@@ -61,19 +61,24 @@ def external_value_fast(i : int, neighbors_of_i: np.ndarray, incoming: dict) -> 
     return first_summand + second_summand
 
 
-def shapetrust(A: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def shapetrust(A: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     n = A.shape[0]
     internal_phi = np.zeros(n)
     external_phi = np.zeros(n)
+    outgoing_phi = np.zeros(n)
     incoming = precompute_incoming(A)
+    outgoing = precompute_incoming(A.T)
 
     for i in range(n):
         internal_phi[i] = internal_value(i, A)
 
         neighbors_of_i = np.where(np.isfinite(A[i, :]))[0]
         external_phi[i] += external_value_fast(i, neighbors_of_i, incoming)
+        
+        neighbors_of_i = np.where(np.isfinite(A.T[i, :]))[0]
+        outgoing_phi[i] += external_value_fast(i, neighbors_of_i, outgoing)
 
-    return internal_phi, external_phi
+    return internal_phi, external_phi, outgoing_phi
 
 from numba import njit, prange # type: ignore
 
@@ -178,5 +183,5 @@ def shapetrust_numba(A, max=False):
                 neighbors.append(j)
 
         external_phi[i] = external_value_numba(i, np.array(neighbors), incoming_vals, incoming_idx)
-
+        
     return internal_phi, external_phi

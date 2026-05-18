@@ -33,7 +33,7 @@ def _sample_discrete(dist: list[tuple[int, float]], rng: random.Random) -> int:
             return value
     return dist[-1][0]
     
-def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: PriceHandler, rng: random.Random) -> Transaction:
+def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: PriceHandler, rng: random.Random, norm: str) -> Transaction:
     """Simulate one transaction record.
     
     Args:
@@ -41,6 +41,8 @@ def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: Price
         seller: Seller peer object (with q parameter).
         t: Discrete simulation time t_k.
         price: Transaction price p_k.
+        norm: Normalization mode.
+        
     Returns:
         A :class:`Transaction` with fields:
         - outcome_ok: o_k ∈ {0,1}
@@ -54,7 +56,7 @@ def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: Price
     # Price draw
     price = price_handler.gen_price(rng)
     price_weight = price_handler.weight_from_price(price)
-    # Get price weight before updating the price handler with the new price
+    # Get price weight before updating the price mean with the new price
     price_handler.update_mean(price)
     
     # Outcome generation
@@ -64,8 +66,14 @@ def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: Price
     rating = buyer.sample_stars(outcome_ok, seller_id=seller.peer_id) 
 
     # Normalized score
-    # s_norm = None if rating is None else (rating - 2.5) / 2.5
-    s_norm = None if rating is None else rating / 5.0
+    if rating is None:
+        s_norm = None
+    elif norm == "positive":
+        s_norm = rating / 5.0
+    elif norm == "negative":
+        s_norm = (rating - 2.5) / 2.5
+    else:
+        raise ValueError(f"Unsupported normalization mode: {norm}")
 
     return Transaction(
         t=t,

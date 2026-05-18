@@ -1,12 +1,3 @@
-"""Small utilities for sampling and numerical helpers.
-
-This module keeps config parsing independent of any heavy dependencies.
-It provides:
-
-- :class:`DistSpec` for sampling peer parameters (q, h) from simple distributions
-- :func:`safe_softmax` for stable softmax sampling of sellers
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

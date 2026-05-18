@@ -1,21 +1,9 @@
-"""CLI entrypoint for running a single simulation experiment.
-
-Usage:
-    python main.py path/to/experiment.json --out out_dir
-
-The experiment setup file is parsed by :func:`tms_sim.load_experiment_config` and the
-simulation itself is executed by :func:`tms_sim.run_experiment`.
-"""
-
 from __future__ import annotations
-
 import argparse
 import json
 from pathlib import Path
 
 from tms_sim import load_experiment_configs, run_experiment
-
-
 
 def main() -> int:
     """Parse CLI args, run the experiment, and optionally write outputs.
@@ -43,6 +31,8 @@ def main() -> int:
         out_root.mkdir(parents=True, exist_ok=True)
     else:
         out_root = None
+        
+    exp_name = str(out_root).split("\\")[-1].split("/")[-1] if out_root is not None else "experiment"
 
     multi = len(cfgs) > 1
 
@@ -62,7 +52,7 @@ def main() -> int:
 
         plot_path = None
         if run_out is not None:
-            plot_path = run_out / f"{cfg.global_trust.mode}_min_{cfg.n_steps}.png"
+            plot_path = run_out / f"{exp_name}_{cfg.global_trust.mode}_{cfg.seed}.png"
 
         result = run_experiment(cfg, plot_path=plot_path)
 

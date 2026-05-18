@@ -1,0 +1,22 @@
+{
+  "total_normal": 49935,
+  "total_collusive": 160000,
+  "succ_rate": 0.8274957444678082,
+  "dishon_rate": 0.12137779112846701,
+  "avg_rating": 3.2913387403624714,
+  "avg_score": 0.6582677480724218,
+  "good_pick_rate": 0.5014719134875338,
+  "bad_pick_rate": 0.15295884650045058,
+  "other_pick_rate": 0.3455692400120156,
+  "bad_pick_distribution": {
+    "Traitor(periodic)": 0.18473422361874836,
+    "MaliciousBasic(inverse)": 0.03783713013877978,
+    "MaliciousBasic(honest)": 0.1681068342498036,
+    "MaliciousBasic(bad_rater)": 0.031159989526053943,
+    "CollusiveBasic": 0.05538098978790259,
+    "MaliciousRater": 0.024875621890547265,
+    "Traitor(price-based)": 0.19324430479183033,
+    "TargetingMaliciousRater": 0.1166535742340927,
+    "CollusiveTargeting": 0.18800733176224144
+  }
+}

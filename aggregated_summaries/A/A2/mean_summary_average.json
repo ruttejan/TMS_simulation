@@ -1,0 +1,61 @@
+{
+  "algorithm": "mean",
+  "source_dir": "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean",
+  "num_summaries": 10.0,
+  "averages": {
+    "total_normal": 49970.8,
+    "total_collusive": 640000.0,
+    "succ_rate": 0.6755,
+    "dishon_rate": 0.2001,
+    "avg_rating": 2.4477,
+    "avg_score": 0.4895,
+    "good_pick_rate": 0.1603,
+    "bad_pick_rate": 0.2214,
+    "other_pick_rate": 0.6183,
+    "bad_pick_distribution": {
+      "CollusiveTargeting": 0.1241,
+      "Traitor(price-based)": 0.127,
+      "MaliciousBasic(honest)": 0.0684,
+      "TargetingMaliciousRater": 0.1406,
+      "CollusiveBasic": 0.1259,
+      "Traitor(periodic)": 0.1351,
+      "MaliciousBasic(inverse)": 0.0677,
+      "MaliciousBasic(bad_rater)": 0.0668,
+      "MaliciousRater": 0.1445
+    }
+  },
+  "stds": {
+    "total_normal": 79.7669,
+    "total_collusive": 0.0,
+    "succ_rate": 0.0019,
+    "dishon_rate": 0.0015,
+    "avg_rating": 0.0096,
+    "avg_score": 0.0019,
+    "good_pick_rate": 0.0024,
+    "bad_pick_rate": 0.0024,
+    "other_pick_rate": 0.0032,
+    "bad_pick_distribution": {
+      "CollusiveTargeting": 0.0025,
+      "Traitor(price-based)": 0.0034,
+      "MaliciousBasic(honest)": 0.0022,
+      "TargetingMaliciousRater": 0.0045,
+      "CollusiveBasic": 0.0031,
+      "Traitor(periodic)": 0.0022,
+      "MaliciousBasic(inverse)": 0.0021,
+      "MaliciousBasic(bad_rater)": 0.0022,
+      "MaliciousRater": 0.0026
+    }
+  },
+  "summary_files": [
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_123\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_2345\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_2874\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_3456\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_5432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_6789\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_7890\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_8765\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\A\\A2\\mean\\seed_9876\\summary.json"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "algorithm": "shape",
+  "source_dir": "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape",
+  "num_summaries": 10.0,
+  "averages": {
+    "total_normal": 49960.1,
+    "total_collusive": 0.0,
+    "succ_rate": 0.9211,
+    "dishon_rate": 0.0508,
+    "avg_rating": 3.7957,
+    "avg_score": 0.7591,
+    "good_pick_rate": 0.5176,
+    "bad_pick_rate": 0.1391,
+    "other_pick_rate": 0.3433,
+    "bad_pick_distribution": {
+      "TargetingMaliciousRater": 0.281,
+      "Traitor(price-based)": 0.3278,
+      "MaliciousRater": 0.0608,
+      "Traitor(periodic)": 0.3304
+    }
+  },
+  "stds": {
+    "total_normal": 114.7296,
+    "total_collusive": 0.0,
+    "succ_rate": 0.0012,
+    "dishon_rate": 0.0011,
+    "avg_rating": 0.0077,
+    "avg_score": 0.0015,
+    "good_pick_rate": 0.0026,
+    "bad_pick_rate": 0.0012,
+    "other_pick_rate": 0.0022,
+    "bad_pick_distribution": {
+      "TargetingMaliciousRater": 0.0086,
+      "Traitor(price-based)": 0.0083,
+      "MaliciousRater": 0.007,
+      "Traitor(periodic)": 0.0102
+    }
+  },
+  "summary_files": [
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_123\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_2345\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_2874\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_3456\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_5432\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_6789\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_7890\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_8765\\summary.json",
+    "C:\\Users\\honza\\Desktop\\DP\\TMS_simulation\\out\\D\\D1\\shape\\seed_9876\\summary.json"
+  ]
+}

@@ -1,6 +1,4 @@
 from dataclasses import dataclass
-
-import math
 import numpy as np
 
 @dataclass
@@ -19,24 +17,19 @@ class TrustAccumulator:
     last_t: int = 0
     
 def decay_factor(lambd: float, dt: int) -> float:
-    """Compute exp(-lambda * dt) for integer time steps."""
+    """Compute the decay factor for integer time steps."""
 
     if dt <= 0:
         return 1.0
-    return math.exp(-lambd * dt)
+    return lambd ** (-dt)
 
 class LocalTrustStore:
-    """Sparse store for pairwise local trust T_ij (buyer -> seller).
-
-    This is the local trust matrix concept, but stored sparsely: only pairs that
-    actually transact are allocated.
-    """
+    """Maintains local trust values T_ij for all buyer-seller pairs."""
     
     def __init__(self, n: int, lambd: float) -> None:
         self.lambd = lambd
         self.local_values = {}
         self.trust_matrix = np.full((n, n), np.inf) # Initialize with infinity to indicate no history
-
 
     def get_local_value(self, buyer: int, seller: int, t: int) -> float:
         """Return local trust value $T_{ij}(t)$.
@@ -56,7 +49,7 @@ class LocalTrustStore:
         if acc is None:
             return 0.0
         # apply decay when reading the value
-        # self.apply_decay(acc, t)
+        self.apply_decay(acc, t)
         if acc.d_sum <= 0.0:
             return 0.0
         return acc.n_sum / acc.d_sum
@@ -69,14 +62,6 @@ class LocalTrustStore:
         """Return the local trust values T_ij for a given buyer i."""
         return self.trust_matrix[buyer, :]
     
-    def resize_matrix(self, new_size: int) -> None:
-        """Resize the local trust matrix to accommodate more peers."""
-        old_size = self.trust_matrix.shape[0]
-        if new_size > old_size:
-            new_matrix = np.full((new_size, new_size), np.inf)
-            new_matrix[:old_size, :old_size] = self.trust_matrix
-            self.trust_matrix = new_matrix
-
     def update(self, buyer: int, seller: int, t: int, weight: float, score: float | None) -> None:
         """Add one new weighted observation to (i,j).
 
@@ -86,9 +71,6 @@ class LocalTrustStore:
             t: Current simulation time t_k.
             weight: Weight w_k (typically derived from price).
             score: Normalized score s_k in [0,1].
-
-        Returns:
-            None. (Updates internal accumulators.)
         """
         if score is None:
             return
