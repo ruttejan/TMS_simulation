@@ -39,7 +39,7 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
         "SybilAccountPeer": SybilAccountPeer,
     }
 
-    def _make_peer(kind: str, peer_id: int, params: dict[str, Any], spec_q: Any, spec_h: Any) -> Peer:
+    def _make_peer(kind: str, peer_id: int, params: dict[str, Any], spec_q: Any) -> Peer:
         if kind not in peer_types:
             raise ValueError(f"Unknown peer kind: {kind!r}")
 
@@ -60,7 +60,7 @@ def _build_peers(cfg: ExperimentConfig, rng: random.Random) -> tuple[list[Peer],
     for spec in cfg.peers:
         params = dict(spec.params)
         for _ in range(spec.count):
-            peers.append(_make_peer(spec.kind, peer_id, params, spec.q, spec.h))
+            peers.append(_make_peer(spec.kind, peer_id, params, spec.q))
             if spec.kind in ("CollusiveBasicPeer", "CollusiveTargetingPeer"):
                 collusive_peer_ids.append(peer_id)
             if spec.kind == "SybilAccountPeer":

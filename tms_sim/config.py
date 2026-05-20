@@ -38,7 +38,7 @@ class SelectionConfig:
 
 @dataclass(frozen=True)
 class PriceConfig:
-    """Transaction price generation + weighting parameters."""
+    """Transaction price generation model: log-normal distribution with parameters mu and sigma."""
 
     mu: float = 0.0
     sigma: float = 0.6
@@ -46,9 +46,9 @@ class PriceConfig:
 
 @dataclass(frozen=True)
 class DecayConfig:
-    """Exponential time decay for trust evidence: d = exp(-lambda * Δt)."""
+    """Exponential time decay for trust evidence: d = lambda^(-Δt)."""
 
-    lambd: float = 0.02  # time decay lambda
+    lambd: float = 1.02  # time decay lambda
 
 
 @dataclass(frozen=True)
@@ -73,7 +73,7 @@ class NormalizationConfig:
     """How global trust values are normalized.
 
     Supported modes:
-    - ``positive``: No normalization applied.
+    - ``positive``: Normalize to the interval [0, 1].
     - ``negative``: Normalize to the interval [-1, 1].
     """
 
@@ -90,27 +90,17 @@ class PeerSpecConfig:
         count: Number of peers of this type to create.
         params: Constructor kwargs for the peer class.
         q: Optional q distribution for the base ``Peer`` kind.
-        h: Optional h distribution for the base ``Peer`` kind.
     """
 
     kind: str
     count: int
     params: Mapping[str, Any]
     q: Optional[DistSpec] = None
-    h: Optional[DistSpec] = None
 
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    """Top-level experiment configuration.
-
-    Main loop parameters:
-    - ``n_steps``: number of discrete time steps.
-    - ``receivers``: interval for how many buyers execute transactions at each step.
-
-    Peer generation:
-    - ``peers``: typed peer entries; total peers is the sum of their counts.
-    """
+    """Top-level experiment configuration."""
 
     seed: int = 123
     n_steps: int = 200
@@ -171,12 +161,22 @@ def _require(mapping: Mapping[str, Any], key: str) -> Any:
     return mapping[key]
 
 
-def _parse_candidate_cfg(obj: Mapping[str, Any]) -> CandidateConfig:
-    return CandidateConfig(
-        min_count=int(obj.get("min_count", 5)),
-        max_count=int(obj.get("max_count", 15)),
-    )
-
+def _parse_candidate_cfg(obj: Any) -> CandidateConfig:
+    """Parse candidate config from legacy int or interval object.
+    
+    Supported forms:
+    - ``candidates: 10``
+    - ``candidates: {min_count: 5, max_count: 15}``
+    """
+    
+    if isinstance(obj, Mapping):
+        return CandidateConfig(
+            min_count=int(obj.get("min_count", 5)),
+            max_count=int(obj.get("max_count", 15)),
+        )
+        
+    fixed = int(obj)
+    return CandidateConfig(min_count=fixed, max_count=fixed)
 
 def _parse_receiver_cfg(obj: Any) -> ReceiverConfig:
     """Parse receiver config from legacy int or interval object.
@@ -188,7 +188,7 @@ def _parse_receiver_cfg(obj: Any) -> ReceiverConfig:
 
     if isinstance(obj, Mapping):
         min_count = int(obj.get("min_count", 10))
-        max_count = int(obj.get("max_count", min_count))
+        max_count = int(obj.get("max_count", 20))
         return ReceiverConfig(min_count=min_count, max_count=max_count)
 
     fixed = int(obj)
@@ -211,10 +211,6 @@ def _parse_price_cfg(obj: Mapping[str, Any]) -> PriceConfig:
 
 
 def _parse_decay_cfg(obj: Mapping[str, Any]) -> DecayConfig:
-    """Parse time decay config.
-
-    Accepts either ``{"lambda": ...}````.
-    """
     lambd =  obj.get("lambda", 1.02)
     return DecayConfig(lambd=float(lambd))
 
@@ -268,16 +264,13 @@ def _parse_peer_spec_cfg(obj: Mapping[str, Any]) -> PeerSpecConfig:
             else:
                 raise ValueError(f"Invalid format for {k}: must be a list or range string")
             
-                
-
     # Base Peer supports explicit q/h distribution specs.
     q = parse_float_or_dist(obj["q"]) if "q" in obj else None
-    h = parse_float_or_dist(obj["h"]) if "h" in obj else None
 
-    if kind == "Peer" and (q is None or h is None):
-        raise ValueError("Peer entries require both 'q' and 'h'")
+    if kind == "Peer" and (q is None):
+        raise ValueError("Peer entries require 'q'")
 
-    return PeerSpecConfig(kind=kind, count=count, params=params, q=q, h=h)
+    return PeerSpecConfig(kind=kind, count=count, params=params, q=q)
 
 
 def _load_experiment_raw(path: str | Path) -> Mapping[str, Any]:

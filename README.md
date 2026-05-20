@@ -1,48 +1,60 @@
 # TMS_simulation
 
-Python implementation of the simulation described in `ideas/simulation_overview.md` (non-Appendix part).
-
 ## Run
 
-From this folder:
+Always use the `--out` flag. Without the flag the program only prints the the statistics on the terminal.
 
 ```
-python main.py experiments/example.json5 --out out/example_run
+python main.py experiments\example.json5 --out out\example
 ```
 
-If the experiment config uses multiple seeds (``seed`` as an array), the experiment
-is run once per seed, and outputs are written into per-seed subfolders:
+or
 
 ```
-python main.py experiments/example.json5 --out out/example_run
-# writes out/example_run/seed_123/, out/example_run/seed_456/, ...
+python main.py experiments\THREAT_A\A1.json5 -- out out\A\A1
 ```
+
+The outputs are written into per-algorithm subfolders and further in per-seed subfolders.
 
 Outputs:
 
-- `summary.json` — aggregated statistics
+- `global_trust.csv` - final global trust values
+- `summary.json` — statistics
 - `transactions.jsonl` — one transaction per line (can be large)
+- plots of final global trust values and distributions of sellers/buyers
 
 ## Experiment setup format
 
-Experiments are defined as a JSON/JSON5 file. See `experiments/example.json5`.
+Experiments are defined as a JSON/JSON5 file. 
+See `experiments/example.json5`. You will see every possible setup with comments.
 
-JSON5 allows comments, trailing commas, and unquoted keys.
-
-Key concepts:
-
-- Peers are created from typed `peers` entries (`kind`, `count`, optional `params`).
-- `receivers_per_step` can be a fixed integer or an interval object (`min_count`, `max_count`) sampled each step.
-- `seed` can be either a single integer (`seed: 123`) or an array of integers (`seed: [123, 456, 789]`).
-- Peers are always online (no churn model).
-- Local trust is a decayed, price-weighted average of normalized star ratings.
-- Seller selection uses a convex combination of local trust and global seller reputation.
 
 ## Code layout
 
-- `tms_sim/config.py` — config dataclasses + JSON loader
-- `tms_sim/transaction.py` — outcome + rating generation
-- `tms_sim/trust.py` — local trust and seller reputation stores
-- `tms_sim/selection.py` — argmax / softmax seller selection
-- `tms_sim/stats.py` — aggregated measurements
-- `tms_sim/simulation.py` — main loop
+- `main.py` - reding input and running main loop
+- `tms_sim/simulation.py` - main loop
+- `tms_sim/transaction.py` - rating generation
+- `tms_sim/price.py` - price handler implementation
+- `tms_sim/selection.py` - argmax / softmax seller selection
+- `tms_sim/local_trust.py` - local trust computation and storing
+- `tms_sim/global_trust.py` - global trust computation and storing
+- `tms_sim/eigentrust.py` - EigenTrust implementation
+- `tms_sim/shapetrust.py` - SHAPE-Trust implementation
+- `tms_sim/peers.py` - peer definitions
+- `tms_sim/stats.py` - statistical metrics and plots
+- `tms_sim/config.py` - config dataclasses + JSON loader
+- `tms_sim/distributions.py` - helper functions
+
+## Extras
+
+### Aggregation of statistics
+
+For averaging all seeds for all algorithms in a scenario we have `aggregate_algorithm_summaries.py`.
+
+```
+python aggregate_algorithm_summaries.py --input .\out\A\A1 --output .\aggregated_summaries\A\A1
+```
+
+### Trator analysis notebook
+
+In the `seller_cheat_analysis.ipynb` we did the posthoc analysis of Traitor peers for Experiment D.

@@ -1,17 +1,20 @@
 {
-  "total_normal": 59928,
-  "total_collusive": 0,
-  "succ_rate": 0.8976772126551862,
-  "dishon_rate": 0.21522493659057534,
-  "avg_rating": 2.972066479775731,
-  "avg_score": 0.5944132959551238,
-  "good_pick_rate": 0.37778667734614874,
-  "bad_pick_rate": 0.1408523561607262,
-  "other_pick_rate": 0.4813609664931251,
+  "total_normal": 60000,
+  "total_collusive": 42000,
+  "succ_rate": 0.7684666666666666,
+  "dishon_rate": 0.24771666666666667,
+  "avg_rating": 2.4705833333333334,
+  "avg_score": 0.4941166666666813,
+  "good_pick_rate": 0.1853,
+  "bad_pick_rate": 0.14901666666666666,
+  "other_pick_rate": 0.6656833333333333,
   "bad_pick_distribution": {
-    "MaliciousRater": 0.10887335623741264,
-    "MaliciousBasic(bad_rater)": 0.03672550645658097,
-    "Traitor(periodic)": 0.42281720175334675,
-    "Traitor(price-based)": 0.4315839355526596
+    "CollusiveBasic": 0.05200760541326473,
+    "MaliciousBasic(bad_rater)": 0.03142825187339224,
+    "MaliciousRater": 0.04250083883234537,
+    "TargetingMaliciousRater": 0.163516385191813,
+    "Traitor(price-based)": 0.2544458114304888,
+    "Traitor(periodic)": 0.2715579912761436,
+    "CollusiveTargeting": 0.1845431159825523
   }
 }

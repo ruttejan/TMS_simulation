@@ -94,18 +94,9 @@ class Stats:
         self.bad_pick_dict = {}
         self.sellers_distribution = np.zeros(n)
         self.buyers_distribution = np.zeros(n)
-        
-    
 
     def update_normal(self, tx: Transaction) -> None:
-        """Update aggregate counters with one new transaction.
-
-        Args:
-            tx: The transaction record.
-
-        Returns:
-            None. (Updates internal counters.)
-        """
+        """Update aggregate counters with one new transaction."""
 
         self.total_normal += 1
         self.succ += int(tx.outcome_ok)
@@ -137,17 +128,7 @@ class Stats:
             self.bad_pick_dict[pick_type] = self.bad_pick_dict.get(pick_type, 0) + 1
 
     def snapshot(self) -> dict:
-        """Return a JSON-serializable dict of current metric values.
-
-        Returns:
-            Dict with keys:
-            - total
-            - succ_rate
-            - dishon_rate
-            - avg_rating
-            - avg_score
-            - good_pick_rate
-        """
+        """Return a JSON-serializable dict of current metric values."""
         return {
             "total_normal": self.total_normal,
             "total_collusive": self.total_collusive,

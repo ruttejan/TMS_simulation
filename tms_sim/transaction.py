@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 import random
 
@@ -14,24 +13,9 @@ class Transaction:
     seller: int
     outcome_ok: int  # o_k in {0,1}
     rating: int | None
-    s_norm: float | None # r_k/5
+    s_norm: float | None
     price: float
     price_weight: float
-    
-
-SUCCESS_STAR_DIST = [(5, 0.6), (4, 0.3), (3, 0.1)]
-FAIL_STAR_DIST = [(0, 0.5), (1, 0.3), (2, 0.2)]
-
-def _sample_discrete(dist: list[tuple[int, float]], rng: random.Random) -> int:
-    """Sample from a small discrete distribution given as (value, probability)."""
-
-    r = rng.random()
-    acc = 0.0
-    for value, p in dist:
-        acc += p
-        if r <= acc:
-            return value
-    return dist[-1][0]
     
 def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: PriceHandler, rng: random.Random, norm: str) -> Transaction:
     """Simulate one transaction record.
@@ -40,17 +24,12 @@ def evaluate_transaction(buyer: Peer, seller: Peer, t: int, price_handler: Price
         buyer: Buyer peer object (with h parameter).
         seller: Seller peer object (with q parameter).
         t: Discrete simulation time t_k.
-        price: Transaction price p_k.
+        price_handler: PriceHandler object to generate prices and compute price weights.
+        rng: Random number generator.
         norm: Normalization mode.
         
     Returns:
-        A :class:`Transaction` with fields:
-        - outcome_ok: o_k ∈ {0,1}
-        - r_true: truthful stars
-        - z_honest: honesty indicator z_k ∈ {0,1}
-        - r_reported: reported stars after inversion (if dishonest)
-        - s_norm: normalized score in [0,1]
-        - price: transaction price
+        A :class:`Transaction` object containing the transaction record.
     """
     
     # Price draw

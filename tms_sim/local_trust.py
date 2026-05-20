@@ -40,8 +40,7 @@ class LocalTrustStore:
             t: Current simulation time (used to apply time decay).
 
         Returns:
-            Local trust T_ij(t) in [0,1]. If there is no history for (i,j), returns
-            the configured prior.
+            Local trust T_ij(t).
         """
 
         key = (buyer, seller)
@@ -69,7 +68,7 @@ class LocalTrustStore:
             buyer: Buyer id i.
             seller: Seller id j.
             t: Current simulation time t_k.
-            weight: Weight w_k (typically derived from price).
+            weight: Weight w_k (derived from price).
             score: Normalized score s_k in [0,1].
         """
         if score is None:

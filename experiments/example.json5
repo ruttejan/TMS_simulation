@@ -1,32 +1,42 @@
 {
   // Reproducibility
-  // seed: 456,
-  // Or run multiple times:
-  seed: [123, 456, 789],
+  // You can use one seed or multiple seeds:
+  seed: 123,
+  // seed: [123, 456, 789],
 
   // Main loop
   n_steps: 4000,
+  // Receiver sampling
   receivers_per_step: {
     min_count: 10,
     max_count: 20,
   },
+  // or fixed number of receivers per step
+  // receivers_per_step: 15,
 
   // Candidate seller sampling
   candidates: {
     min_count: 3,
     max_count: 5,
   },
+  // or fixed number of candidates
+  // candidates: 4,
 
   // Seller selection
+  // "softmax" or "argmax"
+  // Beta is only used for softmax
   selection: {
-    mode: "softmax", // "softmax" or "argmax"
+    mode: "softmax",
     // mode: "argmax",
     theta: 0.2,
     beta: 2.0,
   },
 
+  // normalization mode of local trust values
+  // positive: [0, 1]
+  // negative: [-1, 1]
   normalization: {
-    mode: "positive", // "positive" or "negative"
+    mode: "positive", 
   },
 
   // Price model
@@ -40,9 +50,7 @@
     lambda: 1.02,
   },
 
-  // Run all three global trust algorithms in one experiment file.
-  // Per-mode overrides are supported; each entry can be a string or an object
-  // with mode-specific parameters.
+  // Global trust aggregations
   global_trust: {
     modes: [
       "mean",
@@ -59,37 +67,72 @@
     },
     {
       kind: "HonestSupremePeer",
-      count: 3,
-    },
-    {
-      kind: "MaliciousRaterPeer",
-      count: 4,
+      count: 5,
     },
     {
       kind: "MaliciousBasicPeer",
-      count: 2,
+      count: 5,
       params: {
         type: "bad_rater", // "honest", "inverse", or "bad_rater"
       },
     },
     {
+      kind: "MaliciousRaterPeer",
+      count: 5,
+    },
+    {
+      kind: "TargetingMaliciousRaterPeer",
+      count: 5,
+      params: {
+        target_seller_ids: "range(0,15)", // range of seller IDs to target - all honest peers
+      },
+    },
+    {
       kind: "FreeRiderPeer",
-      count: 2,
+      count: 5,
+    },
+    {
+      kind: "FreeRiderBuyerPeer",
+      count: 5,
     },
     {
       kind: "TraitorPeer",
-      count: 2,
+      count: 5,
       params: {
         betrayal_gap: 9, // Number of honest transactions before betrayal
-        periodic: true, // If true, betrays every betrayal_gap transactions; if false, betrays on big transactions
+        periodic: true, // Betrays every betrayal_gap transactions
       },
     },
     {
       kind: "TraitorPeer",
-      count: 2,
+      count: 5,
       params: {
-        periodic: false, // If true, betrays every betrayal_gap transactions; if false, betrays on big transactions
+        periodic: false, // Betrays on big transactions
       },
-    }
+    },
+    {
+      kind: "CollusiveBasicPeer",
+      count: 5,
+      params: {
+        colluder_ids: "range(50, 60)", // all colluders (basic + targeting)
+        quality: false, // optional (default: false)
+      },
+    },
+    {
+      kind: "CollusiveTargetingPeer",
+      count: 5,
+      params: {
+        colluder_ids: "range(50, 60)", // all colluders (basic + targeting)
+        target_seller_ids: "range(0, 15)", // all honest peers
+        quality: false,  // optional (default: false)
+      },
+    },
+    {
+      kind: "SybilAccountPeer",
+      count: 5,
+      params: {
+        main_account_id: 15, // first malicious peer
+      },
+    },
   ],
 }
