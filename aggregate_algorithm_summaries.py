@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-"""Average all summary.json files for each algorithm directory under a run root.
-
-Example:
-    python aggregate_algorithm_summaries.py \
-    --input out/A/A1 \
-    --output aggregated_summaries/A/A1
-"""
-
 from __future__ import annotations
 
 import argparse

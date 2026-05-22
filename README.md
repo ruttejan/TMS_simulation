@@ -58,3 +58,17 @@ python aggregate_algorithm_summaries.py --input .\out\A\A1 --output .\aggregated
 ### Trator analysis notebook
 
 In the `seller_cheat_analysis.ipynb` we did the posthoc analysis of Traitor peers for Experiment D.
+
+# Requirements
+
+Python 3.9+ and the following libraries:
+
+```
+pip install numpy pandas matplotlib numba json5
+```
+
+- `numpy` - numerical computation
+- `pandas` - transaction data handling
+- `matplotlib` - plots
+- `numba` - SHAPE-Trust acceleration
+- `json5` - reading JSON5 experiment files
